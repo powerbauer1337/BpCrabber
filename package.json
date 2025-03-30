@@ -4,6 +4,15 @@
   "version": "1.0.0",
   "description": "An Electron-based desktop application for downloading and managing your Beatport music collection",
   "main": "dist/main/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/powerbauer1337/beatport-downloader.git"
+  },
+  "author": "powerbauer1337",
+  "bugs": {
+    "url": "https://github.com/powerbauer1337/beatport-downloader/issues"
+  },
+  "homepage": "https://github.com/powerbauer1337/beatport-downloader#readme",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -16,11 +25,6 @@
     "prepare": "husky install",
     "start": "electron-vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/beatport-downloader"
-  },
-  "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
