@@ -140,6 +140,17 @@
         "LOG_LEVEL": "debug",
         "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
       }
+    },
+    "Git Tools": {
+      "description": "Git and GitHub integration server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "git"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
     }
   },
   "settings": {

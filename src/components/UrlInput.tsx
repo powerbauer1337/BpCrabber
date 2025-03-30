@@ -70,13 +70,19 @@ export const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
         </Alert>
       )}
 
-      <Box component="form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+      <Box
+        component="form"
+        onSubmit={e => {
+          e.preventDefault();
+          handleSubmit();
+        }}
+      >
         <TextField
           fullWidth
           label="Beatport Track URL"
           placeholder="https://www.beatport.com/track/..."
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={e => setUrl(e.target.value)}
           margin="normal"
           required
         />

@@ -8,14 +8,14 @@ module.exports = {
       tool: 'notarytool',
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID
+      teamId: process.env.APPLE_TEAM_ID,
     },
     osxNotarize: {
       tool: 'notarytool',
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID
-    }
+      teamId: process.env.APPLE_TEAM_ID,
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -27,7 +27,7 @@ module.exports = {
         exe: 'beatport-downloader.exe',
         setupIcon: './assets/icon.ico',
         certificateFile: process.env.WINDOWS_SIGN_CERT,
-        certificatePassword: process.env.WINDOWS_SIGN_PASS
+        certificatePassword: process.env.WINDOWS_SIGN_PASS,
       },
     },
     {
@@ -79,19 +79,19 @@ module.exports = {
         build: [
           {
             entry: 'src/main.ts',
-            config: 'vite.main.config.ts'
+            config: 'vite.main.config.ts',
           },
           {
             entry: 'src/preload.ts',
-            config: 'vite.preload.config.ts'
-          }
+            config: 'vite.preload.config.ts',
+          },
         ],
         renderer: [
           {
             name: 'main_window',
-            config: 'vite.renderer.config.ts'
-          }
-        ]
+            config: 'vite.renderer.config.ts',
+          },
+        ],
       },
     },
   ],

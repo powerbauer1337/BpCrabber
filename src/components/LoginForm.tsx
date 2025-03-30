@@ -60,12 +60,18 @@ export const LoginForm: React.FC = () => {
         </Alert>
       )}
 
-      <Box component="form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+      <Box
+        component="form"
+        onSubmit={e => {
+          e.preventDefault();
+          handleLogin();
+        }}
+      >
         <TextField
           fullWidth
           label="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
           margin="normal"
           required
         />
@@ -75,7 +81,7 @@ export const LoginForm: React.FC = () => {
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           margin="normal"
           required
         />

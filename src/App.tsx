@@ -28,13 +28,13 @@ const App: React.FC = () => {
       if (prev.some(t => t.id === track.id)) {
         setNotification({
           message: 'Track already in the list',
-          severity: 'error'
+          severity: 'error',
         });
         return prev;
       }
       setNotification({
         message: `Added "${track.title}" by ${track.artist}`,
-        severity: 'success'
+        severity: 'success',
       });
       return [...prev, track];
     });
@@ -57,12 +57,14 @@ const App: React.FC = () => {
     if (successCount > 0 || failCount > 0) {
       const message = [
         successCount > 0 ? `${successCount} tracks downloaded successfully` : '',
-        failCount > 0 ? `${failCount} tracks failed to download` : ''
-      ].filter(Boolean).join(', ');
+        failCount > 0 ? `${failCount} tracks failed to download` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
 
       setNotification({
         message,
-        severity: failCount === 0 ? 'success' : 'error'
+        severity: failCount === 0 ? 'success' : 'error',
       });
     }
   };

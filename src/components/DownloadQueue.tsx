@@ -9,7 +9,7 @@ import {
   LinearProgress,
   Button,
   Paper,
-  Alert
+  Alert,
 } from '@mui/material';
 import { Delete as DeleteIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { useDownloadStore } from '../stores/downloadStore';
@@ -38,7 +38,7 @@ export const DownloadQueue: React.FC = () => {
   const { queue, removeFromQueue, clearCompleted } = useDownloadStore();
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({
     progress: 0,
-    status: 'idle'
+    status: 'idle',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -79,9 +79,7 @@ export const DownloadQueue: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Download Queue
         </Typography>
-        <Typography color="textSecondary">
-          No active downloads
-        </Typography>
+        <Typography color="textSecondary">No active downloads</Typography>
       </Box>
     );
   }

@@ -34,10 +34,7 @@ export const UpdateNotification: React.FC = () => {
   }
 
   return (
-    <Snackbar
-      open={open}
-      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-    >
+    <Snackbar open={open} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
       <Alert
         severity="info"
         onClose={handleClose}
@@ -48,9 +45,8 @@ export const UpdateNotification: React.FC = () => {
           </Button>
         }
       >
-        <AlertTitle>Update Available</AlertTitle>
-        A new version ({version}) of Beatport Downloader is available.
-        Please download and install the latest version to get new features and bug fixes.
+        <AlertTitle>Update Available</AlertTitle>A new version ({version}) of Beatport Downloader is
+        available. Please download and install the latest version to get new features and bug fixes.
       </Alert>
     </Snackbar>
   );

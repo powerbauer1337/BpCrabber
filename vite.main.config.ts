@@ -11,7 +11,7 @@ export default defineConfig({
       fileName: () => '[name].js',
     },
     rollupOptions: {
-      external: ['electron']
-    }
-  }
+      external: ['electron'],
+    },
+  },
 });

@@ -62,12 +62,15 @@ export const DownloadQueue: React.FC = () => {
 
   const clearCompleted = () => {
     setDownloads(prev => {
-      const filtered = Object.entries(prev).reduce((acc, [url, item]) => {
-        if (item.status !== 'completed') {
-          acc[url] = item;
-        }
-        return acc;
-      }, {} as Record<string, DownloadItem>);
+      const filtered = Object.entries(prev).reduce(
+        (acc, [url, item]) => {
+          if (item.status !== 'completed') {
+            acc[url] = item;
+          }
+          return acc;
+        },
+        {} as Record<string, DownloadItem>
+      );
       return filtered;
     });
   };
@@ -133,15 +136,15 @@ export const DownloadQueue: React.FC = () => {
                         item.status === 'completed'
                           ? 'success.main'
                           : item.status === 'error'
-                          ? 'error.main'
-                          : 'text.secondary'
+                            ? 'error.main'
+                            : 'text.secondary'
                       }
                     >
                       {item.status === 'downloading'
                         ? `Downloading... ${item.progress}%`
                         : item.status === 'completed'
-                        ? 'Completed'
-                        : item.error || 'Error'}
+                          ? 'Completed'
+                          : item.error || 'Error'}
                     </Typography>
                   </Box>
                 }
