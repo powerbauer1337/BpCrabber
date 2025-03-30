@@ -1,0 +1,18 @@
+.beatportdl-download-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  margin-left: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.beatportdl-download-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.beatportdl-download-btn:active {
+  background-color: rgba(0, 0, 0, 0.2);
+}

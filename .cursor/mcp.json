@@ -1,0 +1,177 @@
+{
+  "mcpServers": {
+    "Code Assistant": {
+      "description": "Code exploration server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "code-assistant"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "File Operations": {
+      "description": "File management server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "files"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "Shell": {
+      "description": "Shell command server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "shell"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "Playwright": {
+      "description": "Playwright automation and testing server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "playwright"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "PLAYWRIGHT_BROWSERS_PATH": "${WORKSPACE_ROOT}/node_modules/playwright-core/.local-browsers",
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
+        "PLAYWRIGHT_SKIP_VALIDATION": "0"
+      }
+    },
+    "Code Runner": {
+      "description": "Code execution and sandbox server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["mcp-server-code-runner"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "MAX_EXECUTION_TIME": "30000",
+        "ALLOWED_LANGUAGES": "javascript,typescript,python,shell"
+      }
+    },
+    "Google Drive": {
+      "description": "Google Drive integration server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-gdrive"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "GDRIVE_CREDENTIALS_PATH": "${WORKSPACE_ROOT}/.config/gdrive-credentials.json",
+        "GDRIVE_TOKEN_PATH": "${WORKSPACE_ROOT}/.config/gdrive-token.json"
+      }
+    },
+    "Fetch": {
+      "description": "HTTP request and API integration server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "fetch"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "MAX_REQUEST_SIZE": "10MB",
+        "REQUEST_TIMEOUT": "30000"
+      }
+    },
+    "Desktop Commander": {
+      "description": "Desktop automation and control server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@wonderwhy-er/desktop-commander"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "ALLOW_SYSTEM_COMMANDS": "true",
+        "MAX_EXECUTION_TIME": "30000"
+      }
+    },
+    "DeepSeek": {
+      "description": "DeepSeek AI integration server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["deepseek-mcp-server"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "Sequential Thinking": {
+      "description": "Sequential thinking and problem-solving server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["mcp-sequentialthinking-tools"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "WSL Exec": {
+      "description": "Windows Subsystem for Linux execution server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["mcp-wsl-exec"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "Vibe Check": {
+      "description": "AI workflow sanity check and pattern interrupt server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["vibe-check-mcp-server"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    },
+    "Client Configuration": {
+      "description": "MCP client configuration management server",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["mcp-client-configuration-server"],
+      "env": {
+        "LOG_LEVEL": "debug",
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+      }
+    }
+  },
+  "settings": {
+    "logLevel": "debug",
+    "fallbackMode": "auto",
+    "maxRetries": 3,
+    "timeout": 30000,
+    "retryDelay": 1000,
+    "validateConfig": true,
+    "validateEnv": true,
+    "workspaceRoot": "${WORKSPACE_ROOT}",
+    "security": {
+      "tokenValidation": true,
+      "commandWhitelist": true,
+      "pathValidation": true,
+      "maxFileSize": "100MB",
+      "maxExecutionTime": 30000,
+      "allowedOrigins": ["http://localhost:3000"]
+    },
+    "performance": {
+      "parallelInitialization": false,
+      "connectionPooling": false,
+      "caching": true,
+      "maxConcurrentServers": 3,
+      "cacheTTL": 3600
+    },
+    "monitoring": {
+      "healthChecks": true,
+      "resourceTracking": true,
+      "errorReporting": true,
+      "metricsCollection": true,
+      "logRetention": "7d"
+    }
+  }
+}

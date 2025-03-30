@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        width: 300px;
+        padding: 16px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+
+      .status {
+        font-size: 14px;
+        margin-bottom: 12px;
+        color: #666;
+      }
+
+      .settings {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #eee;
+      }
+
+      .setting-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .setting-label {
+        flex: 1;
+        font-size: 14px;
+      }
+
+      select {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="title">Beatport Downloader</div>
+
+    <div class="status">Ready to download tracks from Beatport</div>
+
+    <div class="settings">
+      <div class="setting-row">
+        <label class="setting-label">Download Quality</label>
+        <select id="quality">
+          <option value="lossless">FLAC (Lossless)</option>
+          <option value="high">AAC 256kbps</option>
+          <option value="medium">AAC 128kbps</option>
+        </select>
+      </div>
+    </div>
+
+    <script src="../src/popup.js"></script>
+  </body>
+</html>

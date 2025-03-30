@@ -1,0 +1,382 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Coding Standards and Conventions
+
+## File and Folder Structure
+
+### Root Directory Structure
+```
+.
+├── .cursor/              # Cursor-specific configurations and rules
+├── docs/                 # Project documentation
+├── src/                  # Source code
+│   ├── core/            # Core functionality
+│   ├── utils/           # Utility functions
+│   ├── services/        # Service layer
+│   └── tests/           # Test files
+├── tasks/               # Task management
+└── utils/               # Project utilities
+```
+
+### File Organization
+1. **Source Files**
+   - One class/interface per file
+   - Maximum file length: 500 lines
+   - Group related functionality
+   - Keep files focused and single-purpose
+
+2. **Test Files**
+   - Mirror source file structure
+   - Use `*.test.ts` or `*.spec.ts` suffix
+   - One test file per source file
+   - Group tests by feature/component
+
+3. **Documentation**
+   - Keep documentation close to code
+   - Use JSDoc for code documentation
+   - Maintain README files in each directory
+   - Update documentation with code changes
+
+## Naming Conventions
+
+### Files and Directories
+1. **Files**
+   - Use kebab-case for file names: `my-component.ts`
+   - Use PascalCase for class files: `UserService.ts`
+   - Use camelCase for utility files: `stringUtils.ts`
+   - Use `.test.ts` or `.spec.ts` for test files
+
+2. **Directories**
+   - Use kebab-case for directory names: `feature-module`
+   - Use lowercase for standard directories: `src`, `docs`, `utils`
+   - Use PascalCase for component directories: `UserProfile`
+
+### Code Elements
+1. **Variables and Functions**
+   - Use camelCase for variables and functions
+   - Use descriptive, meaningful names
+   - Prefix boolean variables with 'is', 'has', 'should'
+   - Use verbs for function names
+
+2. **Classes and Interfaces**
+   - Use PascalCase for classes and interfaces
+   - Use 'I' prefix for interfaces: `IUserService`
+   - Use descriptive names that indicate purpose
+   - Suffix abstract classes with 'Base' or 'Abstract'
+
+3. **Constants**
+   - Use UPPER_SNAKE_CASE for constants
+   - Group related constants in enums
+   - Use meaningful, descriptive names
+   - Document constant values
+
+## Coding Standards
+
+### General Principles
+1. **Code Style**
+   - Use consistent indentation (2 spaces)
+   - Maximum line length: 100 characters
+   - Use meaningful comments
+   - Keep functions small and focused
+   - Follow single responsibility principle
+
+2. **Error Handling**
+   - Use try-catch blocks appropriately
+   - Create custom error classes
+   - Log errors with context
+   - Handle edge cases explicitly
+   - Provide meaningful error messages
+
+3. **Code Organization**
+   - Group related code together
+   - Use appropriate access modifiers
+   - Minimize code duplication
+   - Follow DRY principle
+   - Use dependency injection
+
+### TypeScript Specific
+1. **Types and Interfaces**
+   - Prefer interfaces over type aliases
+   - Use strict type checking
+   - Avoid 'any' type
+   - Use generics appropriately
+   - Document complex types
+
+2. **Async/Await**
+   - Use async/await over promises
+   - Handle errors properly
+   - Use Promise.all for parallel operations
+   - Avoid callback hell
+   - Document async functions
+
+3. **Modules**
+   - Use ES6 module syntax
+   - Keep modules focused
+   - Use barrel files for exports
+   - Avoid circular dependencies
+   - Document module exports
+
+## Architecture Principles
+
+### Design Patterns
+1. **Structural**
+   - Use dependency injection
+   - Implement interfaces
+   - Follow SOLID principles
+   - Use composition over inheritance
+   - Keep components loosely coupled
+
+2. **Behavioral**
+   - Use observer pattern for events
+   - Implement strategy pattern for algorithms
+   - Use command pattern for actions
+   - Follow state pattern for complex states
+   - Use template pattern for algorithms
+
+3. **Creational**
+   - Use factory pattern for object creation
+   - Implement singleton pattern carefully
+   - Use builder pattern for complex objects
+   - Follow prototype pattern when needed
+   - Use abstract factory for families
+
+### Best Practices
+1. **Performance**
+   - Optimize database queries
+   - Use caching appropriately
+   - Implement lazy loading
+   - Minimize network requests
+   - Profile code regularly
+
+2. **Security**
+   - Validate all inputs
+   - Sanitize user data
+   - Use secure authentication
+   - Implement proper authorization
+   - Follow security best practices
+
+3. **Testing**
+   - Write unit tests
+   - Implement integration tests
+   - Use test-driven development
+   - Maintain test coverage
+   - Mock external dependencies
+
+### Documentation
+1. **Code Documentation**
+   - Use JSDoc comments
+   - Document public APIs
+   - Include usage examples
+   - Document complex logic
+   - Keep documentation up to date
+
+2. **Architecture Documentation**
+   - Document system design
+   - Include sequence diagrams
+   - Document component interactions
+   - Maintain architecture decisions
+   - Update documentation regularly
+
+3. **API Documentation**
+   - Document endpoints
+   - Include request/response examples
+   - Document error responses
+   - Keep API versioning
+   - Document authentication
+
+## General Principles
+- Write clean, self-documenting code
+- Follow SOLID principles
+- Keep functions small and focused
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Write unit tests for all new features
+
+## TypeScript/JavaScript Standards
+- Use TypeScript for type safety
+- Prefer const over let, avoid var
+- Use arrow functions for callbacks
+- Use async/await over promises
+- Use interfaces for object shapes
+- Use enums for constants
+- Use proper error handling with try/catch
+
+## File Structure
+- One class/interface per file
+- Use index.ts for exports
+- Group related files in feature folders
+- Keep files under 300 lines
+- Use consistent file naming (kebab-case)
+
+## Naming Conventions
+- PascalCase for classes and interfaces
+- camelCase for variables and functions
+- UPPER_SNAKE_CASE for constants
+- kebab-case for file names
+- Use descriptive, purpose-indicating names
+
+## Testing Standards
+- Write unit tests for all business logic
+- Use Jest for testing
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies
+- Aim for 80%+ code coverage
+
+## Git Practices
+- Write meaningful commit messages
+- Keep commits focused and atomic
+- Use feature branches
+- Follow conventional commits format
+- Review code before merging
+
+## Documentation
+- Document public APIs
+- Keep README up to date
+- Document complex algorithms
+- Use JSDoc for function documentation
+- Include examples in documentation
+
+## Modern TypeScript Practices
+1. **Type Safety**
+   - Enable strict mode in tsconfig.json
+   - Use type inference where possible
+   - Avoid type assertions unless absolutely necessary
+   - Use branded types for type safety
+   - Implement proper type guards
+
+2. **Advanced TypeScript Features**
+   - Use utility types (Partial, Pick, Omit)
+   - Implement mapped types for dynamic properties
+   - Use conditional types for complex type logic
+   - Leverage template literal types
+   - Use const assertions for literal types
+
+3. **Code Organization**
+   - Use barrel exports for cleaner imports
+   - Implement feature-based folder structure
+   - Use index.ts files for public API
+   - Keep private implementation details in separate files
+   - Use path aliases for cleaner imports
+
+## Modern Development Practices
+1. **State Management**
+   - Use immutable state patterns
+   - Implement proper state normalization
+   - Use proper state management libraries
+   - Follow unidirectional data flow
+   - Implement proper state persistence
+
+2. **Performance Optimization**
+   - Implement code splitting
+   - Use proper lazy loading
+   - Optimize bundle size
+   - Implement proper caching strategies
+   - Use performance monitoring tools
+
+3. **Testing Practices**
+   - Implement E2E testing with Cypress
+   - Use React Testing Library for component tests
+   - Implement visual regression testing
+   - Use proper test isolation
+   - Implement proper test coverage reporting
+
+## Code Review Guidelines
+1. **Review Process**
+   - Review code for security vulnerabilities
+   - Check for performance implications
+   - Verify proper error handling
+   - Ensure proper documentation
+   - Check for test coverage
+
+2. **Review Checklist**
+   - Code follows style guide
+   - Tests are included and pass
+   - Documentation is updated
+   - No security vulnerabilities
+   - Performance is considered
+
+3. **Review Best Practices**
+   - Provide constructive feedback
+   - Focus on code quality
+   - Consider maintainability
+   - Check for edge cases
+   - Verify error handling
+
+## Error Handling and Logging Standards
+1. **Error Handling Strategy**
+   - Implement custom error classes for different error types
+   - Use error boundaries for React components
+   - Implement proper error recovery mechanisms
+   - Use proper error tracking services
+   - Implement proper error reporting
+
+2. **Logging Standards**
+   - Use structured logging format
+   - Implement proper log levels (ERROR, WARN, INFO, DEBUG)
+   - Include proper context in logs
+   - Implement proper log rotation
+   - Use proper log aggregation
+
+3. **Error Monitoring**
+   - Implement proper error tracking
+   - Use proper error analytics
+   - Implement proper error alerts
+   - Use proper error reporting
+   - Implement proper error resolution workflow
+
+## Security Standards
+1. **Authentication and Authorization**
+   - Implement proper JWT handling
+   - Use proper session management
+   - Implement proper role-based access control
+   - Use proper password hashing
+   - Implement proper 2FA
+
+2. **Data Security**
+   - Implement proper data encryption
+   - Use proper data sanitization
+   - Implement proper input validation
+   - Use proper output encoding
+   - Implement proper data masking
+
+3. **API Security**
+   - Implement proper rate limiting
+   - Use proper API authentication
+   - Implement proper request validation
+   - Use proper response sanitization
+   - Implement proper CORS policies
+
+## Accessibility Standards
+1. **Web Accessibility**
+   - Follow WCAG 2.1 guidelines
+   - Implement proper ARIA attributes
+   - Use proper semantic HTML
+   - Implement proper keyboard navigation
+   - Use proper color contrast
+
+2. **Component Accessibility**
+   - Implement proper focus management
+   - Use proper screen reader support
+   - Implement proper keyboard shortcuts
+   - Use proper error announcements
+   - Implement proper form validation
+
+3. **Testing Accessibility**
+   - Use proper accessibility testing tools
+   - Implement proper manual testing
+   - Use proper automated testing
+   - Implement proper user testing
+   - Use proper compliance checking 

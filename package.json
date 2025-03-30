@@ -1,0 +1,57 @@
+{
+  "name": "beatport-downloader",
+  "productName": "beatport-downloader",
+  "version": "1.0.0",
+  "description": "A GUI for downloading tracks from Beatport",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "postinstall": "electron-builder install-app-deps",
+    "build:win": "npm run build && electron-builder --win --config",
+    "build:mac": "npm run build && electron-builder --mac --config",
+    "build:linux": "npm run build && electron-builder --linux --config"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/beatport-downloader"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.17.1",
+    "@mui/lab": "^5.0.0-alpha.165",
+    "@mui/material": "^5.15.13",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.1.8",
+    "ini": "^4.1.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.3.0",
+    "@electron-forge/maker-deb": "^7.3.0",
+    "@electron-forge/maker-rpm": "^7.3.0",
+    "@electron-forge/maker-squirrel": "^7.3.0",
+    "@electron-forge/maker-zip": "^7.3.0",
+    "@electron-forge/plugin-vite": "^7.3.0",
+    "@electron-forge/publisher-github": "^7.3.0",
+    "@types/ini": "^4.1.0",
+    "@types/node": "^20.11.28",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^29.1.4",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.1.0",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.6"
+  }
+}

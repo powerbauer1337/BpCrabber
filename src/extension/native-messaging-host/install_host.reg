@@ -1,0 +1,4 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Google\Chrome\NativeMessagingHosts\com.beatportdl.app]
+@="D:\\coding\\dev\\src\\extension\\native-messaging-host\\com.beatportdl.app.json"

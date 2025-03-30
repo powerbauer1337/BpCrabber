@@ -1,0 +1,196 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Architecture Rules
+
+## System Design Principles
+- Follow microservices architecture
+- Implement domain-driven design
+- Use event-driven patterns
+- Maintain loose coupling
+- Ensure high cohesion
+- Follow SOLID principles
+
+## Component Structure
+- Clear separation of concerns
+- Modular and reusable components
+- Dependency injection
+- Interface-based design
+- Single responsibility principle
+
+## Data Management
+- Use TypeORM for database operations
+- Implement repository pattern
+- Follow data normalization
+- Use migrations for schema changes
+- Implement proper indexing
+
+## API Design
+- RESTful API principles
+- Version API endpoints
+- Use proper HTTP methods
+- Implement rate limiting
+- Include proper error handling
+
+## Security
+- Implement authentication
+- Use JWT for authorization
+- Input validation
+- XSS protection
+- CSRF protection
+- Secure headers
+
+## Performance
+- Implement caching
+- Optimize database queries
+- Use connection pooling
+- Implement rate limiting
+- Monitor performance metrics
+
+## Monitoring
+- Logging standards
+- Error tracking
+- Performance monitoring
+- Health checks
+- Alerting system
+
+## Deployment
+- Containerization with Docker
+- CI/CD pipeline
+- Environment configuration
+- Backup strategy
+- Rollback procedures
+
+## Modern Web Architecture
+1. **Frontend Architecture**
+   - Implement component-based architecture
+   - Use proper state management patterns
+   - Implement proper routing strategy
+   - Use proper code splitting
+   - Implement proper error boundaries
+
+2. **Backend Architecture**
+   - Implement proper API versioning
+   - Use proper authentication/authorization
+   - Implement proper rate limiting
+   - Use proper caching strategies
+   - Implement proper logging
+
+3. **Database Architecture**
+   - Use proper database normalization
+   - Implement proper indexing
+   - Use proper connection pooling
+   - Implement proper backup strategy
+   - Use proper migration strategy
+
+## System Integration
+1. **API Integration**
+   - Use proper API documentation
+   - Implement proper error handling
+   - Use proper rate limiting
+   - Implement proper retry strategy
+   - Use proper caching
+
+2. **Third-party Integration**
+   - Use proper API versioning
+   - Implement proper error handling
+   - Use proper rate limiting
+   - Implement proper retry strategy
+   - Use proper caching
+
+3. **Microservices Integration**
+   - Use proper service discovery
+   - Implement proper load balancing
+   - Use proper circuit breakers
+   - Implement proper fallback strategy
+   - Use proper monitoring
+
+## DevOps Practices
+1. **CI/CD Pipeline**
+   - Use proper build automation
+   - Implement proper testing
+   - Use proper deployment strategy
+   - Implement proper monitoring
+   - Use proper rollback strategy
+
+2. **Infrastructure as Code**
+   - Use proper configuration management
+   - Implement proper versioning
+   - Use proper automation
+   - Implement proper monitoring
+   - Use proper backup strategy
+
+3. **Monitoring and Logging**
+   - Use proper logging strategy
+   - Implement proper monitoring
+   - Use proper alerting
+   - Implement proper tracing
+   - Use proper metrics
+
+## Cloud-Native Architecture
+1. **Container Orchestration**
+   - Use Kubernetes for container management
+   - Implement proper pod design
+   - Use proper service mesh
+   - Implement proper auto-scaling
+   - Use proper resource management
+
+2. **Cloud Services**
+   - Use proper cloud storage
+   - Implement proper CDN
+   - Use proper load balancing
+   - Implement proper caching
+   - Use proper database services
+
+3. **Infrastructure**
+   - Use proper IaC tools
+   - Implement proper monitoring
+   - Use proper logging
+   - Implement proper backup
+   - Use proper disaster recovery
+
+## Microservices Architecture
+1. **Service Design**
+   - Implement proper service boundaries
+   - Use proper API design
+   - Implement proper data consistency
+   - Use proper event sourcing
+   - Implement proper CQRS
+
+2. **Service Communication**
+   - Use proper message queues
+   - Implement proper service discovery
+   - Use proper load balancing
+   - Implement proper circuit breakers
+   - Use proper API gateways
+
+3. **Service Management**
+   - Use proper monitoring
+   - Implement proper logging
+   - Use proper tracing
+   - Implement proper metrics
+   - Use proper alerting
+
+## Modern Integration Patterns
+1. **Event-Driven Architecture**
+   - Use proper event sourcing
+   - Implement proper event streaming
+   - Use proper message brokers
+   - Implement proper event handlers
+   - Use proper event versioning
+
+2. **API Gateway**
+   - Use proper routing
+   - Implement proper authentication
+   - Use proper rate limiting
+   - Implement proper caching
+   - Use proper request/response transformation
+
+3. **Service Mesh**
+   - Use proper traffic management
+   - Implement proper security
+   - Use proper observability
+   - Implement proper resilience
+   - Use proper configuration management 

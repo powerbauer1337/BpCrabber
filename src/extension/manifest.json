@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Beatport Downloader",
+  "version": "1.0.0",
+  "description": "Download tracks from Beatport using beatportdl",
+  "icons": {
+    "16": "public/icons/icon.svg",
+    "48": "public/icons/icon.svg",
+    "128": "public/icons/icon.svg"
+  },
+  "action": {
+    "default_popup": "public/popup.html",
+    "default_icon": {
+      "16": "public/icons/icon.svg",
+      "48": "public/icons/icon.svg",
+      "128": "public/icons/icon.svg"
+    }
+  },
+  "permissions": ["activeTab", "storage", "nativeMessaging"],
+  "host_permissions": ["https://www.beatport.com/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.beatport.com/*"],
+      "js": ["src/content.js"],
+      "css": ["src/styles.css"]
+    }
+  ]
+}

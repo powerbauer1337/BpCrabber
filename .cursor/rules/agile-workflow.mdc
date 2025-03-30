@@ -1,0 +1,197 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Agile Workflow Rules
+
+## Sprint Planning
+- Sprint duration: 2 weeks
+- Sprint planning at the start of each sprint
+- Define sprint goals and acceptance criteria
+- Break down tasks into manageable chunks
+- Estimate story points for each task
+
+## Task Management
+- Use GitHub Issues for task tracking
+- Follow issue template format
+- Include acceptance criteria
+- Link related issues and PRs
+- Update task status regularly
+
+## Daily Standups
+- Daily status updates
+- Blockers and impediments
+- Next steps and priorities
+- Team coordination
+
+## Code Review Process
+- Create feature branches
+- Write descriptive PR descriptions
+- Include test coverage
+- Address review comments promptly
+- Merge only after approval
+
+## Definition of Done
+- Code meets coding standards
+- Tests written and passing
+- Documentation updated
+- Code reviewed and approved
+- No blocking issues
+- Feature tested in staging
+
+## Sprint Review
+- Demo completed features
+- Gather stakeholder feedback
+- Update product backlog
+- Celebrate achievements
+
+## Sprint Retrospective
+- What went well
+- What could be improved
+- Action items for next sprint
+- Team process improvements
+
+## Release Process
+- Version tagging
+- Changelog updates
+- Release notes
+- Deployment checklist
+- Post-release monitoring
+
+## Modern Agile Practices
+1. **Automated Workflow**
+   - Use GitHub Actions for CI/CD
+   - Implement automated testing
+   - Use automated code quality checks
+   - Implement automated deployment
+   - Use automated documentation generation
+
+2. **Quality Assurance**
+   - Implement automated testing
+   - Use code quality tools
+   - Implement security scanning
+   - Use performance monitoring
+   - Implement automated accessibility testing
+
+3. **Team Collaboration**
+   - Use proper communication tools
+   - Implement proper documentation
+   - Use proper code review tools
+   - Implement proper knowledge sharing
+   - Use proper team metrics
+
+## Development Workflow
+1. **Feature Development**
+   - Use feature flags
+   - Implement proper branching strategy
+   - Use proper code review process
+   - Implement proper testing strategy
+   - Use proper deployment strategy
+
+2. **Code Quality**
+   - Use proper linting rules
+   - Implement proper formatting
+   - Use proper type checking
+   - Implement proper testing
+   - Use proper documentation
+
+3. **Deployment Strategy**
+   - Use proper environment management
+   - Implement proper versioning
+   - Use proper rollback strategy
+   - Implement proper monitoring
+   - Use proper logging
+
+## Team Practices
+1. **Knowledge Sharing**
+   - Use proper documentation
+   - Implement proper training
+   - Use proper code review
+   - Implement proper mentoring
+   - Use proper team building
+
+2. **Process Improvement**
+   - Use proper metrics
+   - Implement proper feedback
+   - Use proper retrospectives
+   - Implement proper changes
+   - Use proper monitoring
+
+3. **Team Culture**
+   - Use proper communication
+   - Implement proper collaboration
+   - Use proper feedback
+   - Implement proper recognition
+   - Use proper team building
+
+## Modern Development Workflow
+1. **Continuous Integration**
+   - Use proper CI tools
+   - Implement proper build automation
+   - Use proper test automation
+   - Implement proper code quality checks
+   - Use proper dependency management
+
+2. **Continuous Deployment**
+   - Use proper CD tools
+   - Implement proper deployment automation
+   - Use proper environment management
+   - Implement proper rollback procedures
+   - Use proper feature flags
+
+3. **Quality Assurance**
+   - Use proper testing tools
+   - Implement proper test automation
+   - Use proper code coverage tools
+   - Implement proper performance testing
+   - Use proper security scanning
+
+## Automation Guidelines
+1. **Build Automation**
+   - Use proper build tools
+   - Implement proper dependency management
+   - Use proper artifact management
+   - Implement proper versioning
+   - Use proper caching
+
+2. **Test Automation**
+   - Use proper test frameworks
+   - Implement proper test coverage
+   - Use proper test reporting
+   - Implement proper test isolation
+   - Use proper test data management
+
+3. **Deployment Automation**
+   - Use proper deployment tools
+   - Implement proper environment management
+   - Use proper configuration management
+   - Implement proper monitoring
+   - Use proper logging
+
+## Modern Team Practices
+1. **Remote Collaboration**
+   - Use proper communication tools
+   - Implement proper documentation
+   - Use proper code review tools
+   - Implement proper knowledge sharing
+   - Use proper team metrics
+
+2. **Code Review Process**
+   - Use proper review tools
+   - Implement proper review guidelines
+   - Use proper automation
+   - Implement proper feedback
+   - Use proper metrics
+
+3. **Knowledge Management**
+   - Use proper documentation tools
+   - Implement proper training
+   - Use proper code examples
+   - Implement proper mentoring
+   - Use proper team building 

@@ -1,0 +1,36 @@
+{
+  "name": "Indentation Check",
+  "description": "Ensures consistent indentation in code files",
+  "version": "1.0.0",
+  "type": "CODE_STYLE",
+  "conditions": [
+    {
+      "type": "indentation",
+      "parameters": {
+        "spacesPerLevel": 2,
+        "maxIndentation": 8
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "format",
+      "parameters": {
+        "autoFix": true
+      }
+    },
+    {
+      "type": "report",
+      "parameters": {
+        "level": "warning"
+      }
+    }
+  ],
+  "metadata": {
+    "author": "System",
+    "createdAt": "2024-03-30T00:00:00Z",
+    "updatedAt": "2024-03-30T00:00:00Z",
+    "tags": ["style", "formatting"],
+    "priority": 1
+  }
+}

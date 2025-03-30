@@ -1,0 +1,32 @@
+appId: com.beatportdownloader.app
+productName: Beatport Downloader
+directories:
+  output: release/${version}
+files:
+  - out/**/*
+  - beatportdl/**/*
+extraResources:
+  - from: beatportdl-repo/beatportdl
+    to: beatportdl
+    filter:
+      - '**/*'
+mac:
+  target:
+    - dmg
+    - zip
+  artifactName: ${productName}-${version}-${arch}.${ext}
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  artifactName: ${productName}-${version}-${arch}.${ext}
+publish:
+  provider: github
+  private: false
+  releaseType: release

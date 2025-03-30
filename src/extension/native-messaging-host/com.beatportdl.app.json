@@ -1,0 +1,7 @@
+{
+  "name": "com.beatportdl.app",
+  "description": "Beatport Downloader Native Messaging Host",
+  "path": "D:\\coding\\dev\\src\\extension\\native-messaging-host\\host.py",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://YOUR_EXTENSION_ID_HERE/"]
+}

@@ -1,0 +1,70 @@
+{
+  "servers": {
+    "codeAssistant": {
+      "command": "uvx",
+      "args": ["code-assistant", "server"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "gitTools": {
+      "command": "uvx",
+      "args": ["mcp-git-tools"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "taskManager": {
+      "command": "npx",
+      "args": ["-y", "@kazuph/mcp-taskmanager"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "documentation": {
+      "command": "npx",
+      "args": ["-y", "documentation-mcp-server"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "testRunner": {
+      "command": "npx",
+      "args": ["-y", "test-runner-mcp"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "securityScanner": {
+      "command": "npx",
+      "args": ["-y", "security-scanner-mcp"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "performanceMonitor": {
+      "command": "npx",
+      "args": ["-y", "performance-monitor-mcp"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "knowledgeGraph": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    },
+    "sequentialThinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    }
+  },
+  "settings": {
+    "validateEnv": true
+  }
+}

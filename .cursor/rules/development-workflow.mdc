@@ -1,0 +1,66 @@
+---
+description: Development workflow rules for the Beatport app
+globs: ["src/**/*.ts", "src/**/*.js"]
+alwaysApply: true
+---
+
+# Development Workflow Rules
+
+## Code Organization
+- All source code must be in the `src` directory
+- Follow the established directory structure:
+  - `config/` - Configuration files
+  - `middleware/` - Express middleware
+  - `routes/` - API routes
+  - `services/` - Business logic
+  - `utils/` - Utility functions
+  - `tests/` - Test files
+
+## Naming Conventions
+- Use PascalCase for class names and interfaces
+- Use camelCase for variables, functions, and methods
+- Use UPPER_SNAKE_CASE for constants
+- Use kebab-case for file names
+
+## Code Style
+- Follow TypeScript best practices
+- Use strict type checking
+- Avoid any type unless absolutely necessary
+- Use interfaces for object shapes
+- Use enums for fixed sets of values
+
+## Testing
+- Write tests for all new features
+- Maintain test coverage above 80%
+- Use Jest for testing
+- Follow test naming convention: `describe('Component')` and `it('should do something')`
+
+## Git Workflow
+- Use feature branches for new development
+- Follow conventional commits
+- Keep commits atomic and focused
+- Write meaningful commit messages
+
+## Documentation
+- Document all public APIs
+- Keep README up to date
+- Document environment variables
+- Include setup instructions
+
+## Error Handling
+- Use custom error classes
+- Implement proper error logging
+- Handle async errors properly
+- Provide meaningful error messages
+
+## Security
+- Never commit sensitive data
+- Use environment variables for secrets
+- Implement proper authentication
+- Follow security best practices
+
+## Performance
+- Optimize database queries
+- Implement proper caching
+- Use pagination for large datasets
+- Monitor performance metrics
