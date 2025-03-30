@@ -3,81 +3,131 @@
  * @module utils/logger
  */
 
-import winston, { Logger } from 'winston';
 import path from 'path';
+import fs from 'fs';
+import { createWriteStream } from 'fs';
+import { getConfig } from '../config/config';
 
-const logDir = path.join(process.cwd(), 'logs');
+export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
-// Define log levels
-const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  debug: 3,
-} as const;
+export interface LogEntry {
+  level: LogLevel;
+  timestamp: string;
+  message: string;
+  error?: {
+    name: string;
+    message: string;
+    stack?: string;
+  };
+  metadata?: Record<string, unknown>;
+}
 
-// Define log colors
-const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  debug: 'blue',
-} as const;
+class Logger {
+  private logStream: fs.WriteStream;
+  private logQueue: LogEntry[] = [];
+  private readonly MAX_LOG_ENTRIES = 1000;
 
-// Add colors to Winston
-winston.addColors(colors);
+  constructor() {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
 
-// Create format for console output
-const consoleFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(info => {
-    const { timestamp, level, message, ...rest } = info;
-    return `${timestamp} ${level}: ${message as string}${
-      Object.keys(rest).length ? ` ${JSON.stringify(rest)}` : ''
-    }`;
-  })
-);
+    const logFile = path.join(logDir, 'app.log');
+    this.logStream = createWriteStream(logFile, { flags: 'a' });
 
-// Create format for file output
-const fileFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.json()
-);
+    // Rotate logs on startup if file is too large
+    try {
+      const stats = fs.statSync(logFile);
+      if (stats.size > 10 * 1024 * 1024) {
+        // 10MB
+        const backupFile = path.join(logDir, `app.${Date.now()}.log`);
+        fs.renameSync(logFile, backupFile);
+        this.logStream = createWriteStream(logFile, { flags: 'a' });
+      }
+    } catch (error) {
+      console.error('Failed to rotate logs:', error);
+    }
+  }
 
-// Create the logger
-const logger: Logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  levels,
-  transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: consoleFormat,
-    }),
-    // File transport for errors
-    new winston.transports.File({
-      filename: path.join(logDir, 'error.log'),
-      level: 'error',
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    // File transport for all logs
-    new winston.transports.File({
-      filename: path.join(logDir, 'combined.log'),
-      format: fileFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-  ],
-});
+  private log(level: LogLevel, message: string, error?: Error, metadata?: Record<string, unknown>) {
+    const config = getConfig('logging');
+    const logLevels: Record<LogLevel, number> = {
+      error: 0,
+      warn: 1,
+      info: 2,
+      debug: 3,
+    };
 
-// Export a simplified interface
-export const log = {
-  error: (message: string, meta?: Record<string, unknown>) => logger.error(message, { meta }),
-  warn: (message: string, meta?: Record<string, unknown>) => logger.warn(message, { meta }),
-  info: (message: string, meta?: Record<string, unknown>) => logger.info(message, { meta }),
-  debug: (message: string, meta?: Record<string, unknown>) => logger.debug(message, { meta }),
-};
+    // Check if we should log this level
+    if (logLevels[level] > logLevels[config.level]) {
+      return;
+    }
 
-export default logger;
+    const entry: LogEntry = {
+      level,
+      timestamp: new Date().toISOString(),
+      message,
+      metadata,
+    };
+
+    if (error) {
+      entry.error = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+
+    // Add to in-memory queue
+    this.logQueue.unshift(entry);
+    if (this.logQueue.length > this.MAX_LOG_ENTRIES) {
+      this.logQueue.pop();
+    }
+
+    // Write to file
+    this.logStream.write(JSON.stringify(entry) + '\n');
+
+    // Also log to console in development
+    const isDev = getConfig('app').isDev;
+    if (isDev) {
+      const consoleMessage = `[${entry.timestamp}] ${level.toUpperCase()}: ${message}`;
+      if (level === 'error') {
+        console.error(consoleMessage, error || '', metadata || '');
+      } else {
+        console.log(consoleMessage, metadata || '');
+      }
+    }
+  }
+
+  public info(message: string, metadata?: Record<string, unknown>) {
+    this.log('info', message, undefined, metadata);
+  }
+
+  public warn(message: string, metadata?: Record<string, unknown>) {
+    this.log('warn', message, undefined, metadata);
+  }
+
+  public error(message: string, error: Error | unknown, metadata?: Record<string, unknown>) {
+    this.log('error', message, error instanceof Error ? error : new Error(String(error)), metadata);
+  }
+
+  public debug(message: string, metadata?: Record<string, unknown>) {
+    this.log('debug', message, undefined, metadata);
+  }
+
+  public getRecentLogs(limit: number = 100): LogEntry[] {
+    return this.logQueue.slice(0, limit);
+  }
+
+  public async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.logStream.end((err: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+}
+
+export const logger = new Logger();

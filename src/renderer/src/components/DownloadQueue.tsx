@@ -1,158 +1,111 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
+  Paper,
   Typography,
   List,
   ListItem,
   ListItemText,
+  ListItemSecondaryAction,
   IconButton,
   Stack,
   LinearProgress,
-  Tooltip,
+  Button,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { DownloadProgress, DownloadComplete } from '../types/electron';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import { green, red } from '@mui/material/colors';
 
-interface DownloadItem {
+export interface DownloadItem {
+  id: string;
   url: string;
-  progress: number;
-  status: 'downloading' | 'completed' | 'error';
+  name: string;
+  status: 'queued' | 'downloading' | 'completed' | 'error';
   error?: string;
+  progress?: number;
 }
 
-export const DownloadQueue: React.FC = () => {
-  const [downloads, setDownloads] = useState<Record<string, DownloadItem>>({});
+interface DownloadQueueProps {
+  items: DownloadItem[];
+  onRemove: (id: string) => void;
+  onClearCompleted: () => void;
+}
 
-  useEffect(() => {
-    const progressCleanup = window.beatport.onDownloadProgress((progress: DownloadProgress) => {
-      setDownloads(prev => ({
-        ...prev,
-        [progress.url]: {
-          url: progress.url,
-          progress: progress.progress,
-          status: 'downloading',
-        },
-      }));
-    });
-
-    const completeCleanup = window.beatport.onDownloadComplete((result: DownloadComplete) => {
-      setDownloads(prev => ({
-        ...prev,
-        [result.url]: {
-          url: result.url,
-          progress: result.success ? 100 : prev[result.url]?.progress || 0,
-          status: result.success ? 'completed' : 'error',
-          error: result.error,
-        },
-      }));
-    });
-
-    return () => {
-      progressCleanup();
-      completeCleanup();
-    };
-  }, []);
-
-  const removeDownload = (url: string) => {
-    setDownloads(prev => {
-      const { [url]: removed, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  const clearCompleted = () => {
-    setDownloads(prev => {
-      const filtered = Object.entries(prev).reduce(
-        (acc, [url, item]) => {
-          if (item.status !== 'completed') {
-            acc[url] = item;
-          }
-          return acc;
-        },
-        {} as Record<string, DownloadItem>
-      );
-      return filtered;
-    });
-  };
-
-  const hasCompleted = Object.values(downloads).some(item => item.status === 'completed');
-  const downloadCount = Object.keys(downloads).length;
+export const DownloadQueue: React.FC<DownloadQueueProps> = ({
+  items,
+  onRemove,
+  onClearCompleted,
+}) => {
+  const hasCompletedItems = items.some(item => item.status === 'completed');
 
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" component="h2">
-          Downloads ({downloadCount})
-        </Typography>
-        {hasCompleted && (
-          <Tooltip title="Clear completed">
-            <IconButton onClick={clearCompleted} size="small">
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
+    <Paper elevation={2} sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Download Queue</Typography>
+          {hasCompletedItems && (
+            <Button size="small" onClick={onClearCompleted}>
+              Clear Completed
+            </Button>
+          )}
+        </Box>
+
+        {items.length === 0 ? (
+          <Typography color="text.secondary" align="center">
+            No items in queue
+          </Typography>
+        ) : (
+          <List>
+            {items.map(item => (
+              <ListItem
+                key={item.id}
+                sx={{
+                  bgcolor: 'background.paper',
+                  mb: 1,
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <ListItemText
+                  primary={item.name}
+                  secondary={
+                    <Box sx={{ width: '100%' }}>
+                      {item.status === 'downloading' && item.progress !== undefined && (
+                        <LinearProgress
+                          variant="determinate"
+                          value={item.progress}
+                          sx={{ mt: 1 }}
+                        />
+                      )}
+                      <Typography variant="caption" color="text.secondary">
+                        {item.status === 'downloading'
+                          ? `Downloading... ${item.progress}%`
+                          : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <ListItemSecondaryAction>
+                  {item.status === 'completed' && (
+                    <CheckCircleIcon sx={{ color: green[500], mr: 1 }} />
+                  )}
+                  {item.status === 'error' && <ErrorIcon sx={{ color: red[500], mr: 1 }} />}
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => onRemove(item.id)}
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
         )}
       </Stack>
-      {downloadCount === 0 ? (
-        <Typography color="text.secondary" align="center">
-          No active downloads
-        </Typography>
-      ) : (
-        <List
-          dense
-          sx={{
-            maxHeight: 300,
-            overflow: 'auto',
-            bgcolor: 'background.paper',
-            borderRadius: 1,
-          }}
-        >
-          {Object.entries(downloads).map(([url, item]) => (
-            <ListItem
-              key={url}
-              secondaryAction={
-                item.status !== 'downloading' && (
-                  <Tooltip title="Remove from queue">
-                    <IconButton edge="end" size="small" onClick={() => removeDownload(url)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                )
-              }
-            >
-              <ListItemText
-                primary={url}
-                secondary={
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
-                    {item.status === 'downloading' && (
-                      <LinearProgress
-                        variant="determinate"
-                        value={item.progress}
-                        sx={{ height: 4, borderRadius: 1 }}
-                      />
-                    )}
-                    <Typography
-                      variant="caption"
-                      color={
-                        item.status === 'completed'
-                          ? 'success.main'
-                          : item.status === 'error'
-                            ? 'error.main'
-                            : 'text.secondary'
-                      }
-                    >
-                      {item.status === 'downloading'
-                        ? `Downloading... ${item.progress}%`
-                        : item.status === 'completed'
-                          ? 'Completed'
-                          : item.error || 'Error'}
-                    </Typography>
-                  </Box>
-                }
-              />
-            </ListItem>
-          ))}
-        </List>
-      )}
-    </Box>
+    </Paper>
   );
 };

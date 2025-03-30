@@ -3,13 +3,11 @@ productName: Beatport Downloader
 directories:
   output: release/${version}
 files:
-  - out/**/*
-  - beatportdl/**/*
+  - dist/**/*
+  - package.json
 extraResources:
-  - from: beatportdl-repo/beatportdl
-    to: beatportdl
-    filter:
-      - '**/*'
+  - from: resources/*
+    to: ./
 mac:
   target:
     - dmg
@@ -30,3 +28,11 @@ publish:
   provider: github
   private: false
   releaseType: release
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  artifactName: ${productName}-Setup-${version}.${ext}

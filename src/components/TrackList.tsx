@@ -34,7 +34,7 @@ interface TrackListProps {
   onResume?: (track: Track) => void;
 }
 
-const TrackList: React.FC<TrackListProps> = ({
+export const TrackList: React.FC<TrackListProps> = ({
   tracks,
   onDownload,
   onDelete,
@@ -142,5 +142,3 @@ const TrackList: React.FC<TrackListProps> = ({
     </Box>
   );
 };
-
-export default TrackList;

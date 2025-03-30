@@ -1,30 +1,23 @@
-# Beatport Track Downloader
+# Beatport Downloader
 
-An Electron-based desktop application for downloading tracks from Beatport.
+A desktop application for downloading tracks from Beatport, built with Electron, React, and TypeScript.
 
 ## Features
 
-- URL validation for Beatport tracks
-- Download queue management
-- Progress tracking
-- Caching system for better performance
-- Error handling and logging
+- Download tracks from Beatport
+- Track download progress
+- Manage download settings
+- View download history
+- Dark mode UI
+- Auto-updates
 
-## Development
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm or yarn
-- Git
-
-### Setup
+## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd beatport-track-downloader
+git clone https://github.com/yourusername/beatport-downloader.git
+cd beatport-downloader
 ```
 
 2. Install dependencies:
@@ -33,23 +26,21 @@ cd beatport-track-downloader
 npm install
 ```
 
-3. Start the development server:
+3. Create a `.env` file in the root directory and add your configuration:
+
+```bash
+cp .env.example .env
+```
+
+## Development
+
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-### Testing
-
-Run the test suite:
-
-```bash
-npm test
-```
-
-The project uses Playwright for end-to-end testing. Test results, screenshots, and videos are stored in the `test-results` directory.
-
-### Building
+## Building
 
 Build the application:
 
@@ -57,8 +48,29 @@ Build the application:
 npm run build
 ```
 
-The built application will be available in the `dist` directory.
+Create platform-specific packages:
+
+```bash
+npm run make
+```
+
+## Configuration
+
+The application can be configured through the settings panel or by editing the `.env` file:
+
+- `DOWNLOAD_PATH`: Default download location
+- `MAX_CONCURRENT_DOWNLOADS`: Maximum number of simultaneous downloads
+- `AUTO_UPDATE_FEED_URL`: URL for auto-updates
+- `LOG_LEVEL`: Logging level (error, warn, info, debug)
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-[MIT](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

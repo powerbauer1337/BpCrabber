@@ -1,6 +1,308 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+description: Consolidated Cursor Development Rules and Standards
+globs: ["**/*"]
+alwaysApply: true
 ---
- 
+
+# Cursor Development Rules and Standards
+
+## Core Rules
+
+### MCP Server Configuration
+- Follow MCP server configuration in `mcp-config.mdc`
+- Adhere to server startup order
+- Follow resource management guidelines
+- Implement security measures
+- Use proper error handling
+
+### Development Workflow
+1. **Code Development**
+   - Follow TDD approach
+   - Use feature branches
+   - Regular commits with meaningful messages
+   - Code review before merge
+   - Maintain documentation
+
+2. **Issue Management**
+   - Use issue template
+   - Link issues to PRs
+   - Track progress
+   - Regular updates
+   - Clear acceptance criteria
+
+3. **Pull Requests**
+   - Follow PR template
+   - Include tests
+   - Update documentation
+   - Link related issues
+   - Get required reviews
+
+## Coding Standards
+
+### File Organization
+1. **Directory Structure**
+```
+.
+├── .cursor/              # Cursor configurations
+├── .config/             # Configuration files
+├── src/                 # Source code
+│   ├── components/     # React components
+│   ├── services/       # Business logic
+│   ├── utils/          # Utilities
+│   ├── types/         # TypeScript types
+│   └── tests/         # Test files
+├── docs/               # Documentation
+├── scripts/            # Build/deployment scripts
+└── tasks/              # Project tasks
+```
+
+2. **File Naming**
+   - React Components: `PascalCase.tsx`
+   - Utilities: `camelCase.ts`
+   - Tests: `*.test.ts` or `*.spec.ts`
+   - Styles: `*.module.css` or `*.styles.ts`
+   - Constants: `UPPER_SNAKE_CASE.ts`
+
+### Code Style
+1. **TypeScript/JavaScript**
+   - Use TypeScript for type safety
+   - Strict mode enabled
+   - ESLint + Prettier configuration
+   - Maximum line length: 100
+   - Indentation: 2 spaces
+
+2. **React Components**
+   - Functional components with hooks
+   - Props interface defined
+   - Proper prop types
+   - Memoization when needed
+   - Error boundaries
+
+3. **State Management**
+   - Use appropriate state solution
+   - Document state structure
+   - Handle side effects properly
+   - Implement error states
+   - Loading states
+
+### Testing
+1. **Unit Tests**
+   - Jest + React Testing Library
+   - Test business logic
+   - Mock external dependencies
+   - Coverage threshold: 80%
+   - Clear test descriptions
+
+2. **Integration Tests**
+   - Test component integration
+   - API integration tests
+   - End-to-end scenarios
+   - Performance testing
+   - Security testing
+
+### Documentation
+1. **Code Documentation**
+   - JSDoc for public APIs
+   - Clear function descriptions
+   - Type documentation
+   - Usage examples
+   - Edge cases noted
+
+2. **Project Documentation**
+   - README.md in each directory
+   - Architecture documentation
+   - API documentation
+   - Setup instructions
+   - Troubleshooting guide
+
+## Error Handling
+
+### Error Documentation
+1. **Error Types**
+   - User errors
+   - System errors
+   - Network errors
+   - Validation errors
+   - Business logic errors
+
+2. **Error Handling Strategy**
+   - Proper error messages
+   - Error logging
+   - Error recovery
+   - User feedback
+   - Error tracking
+
+### Error Prevention
+1. **Code Quality**
+   - Code reviews
+   - Static analysis
+   - Type checking
+   - Automated testing
+   - Performance monitoring
+
+2. **Security**
+   - Input validation
+   - Output sanitization
+   - Authentication
+   - Authorization
+   - Data protection
+
+## Performance
+
+### Optimization
+1. **Code Level**
+   - Efficient algorithms
+   - Proper data structures
+   - Code splitting
+   - Tree shaking
+   - Bundle optimization
+
+2. **Runtime**
+   - Caching strategy
+   - Lazy loading
+   - Memory management
+   - CPU optimization
+   - Network optimization
+
+### Monitoring
+1. **Metrics**
+   - Performance metrics
+   - Error rates
+   - Resource usage
+   - User metrics
+   - Business metrics
+
+2. **Alerts**
+   - Performance thresholds
+   - Error thresholds
+   - Resource thresholds
+   - Custom alerts
+   - Alert management
+
+## Security
+
+### Access Control
+1. **Authentication**
+   - Secure authentication
+   - Session management
+   - Token handling
+   - Password policies
+   - 2FA support
+
+2. **Authorization**
+   - Role-based access
+   - Permission management
+   - Resource access
+   - API security
+   - Data access control
+
+### Data Protection
+1. **Security Measures**
+   - Data encryption
+   - Secure storage
+   - Secure transmission
+   - Data backup
+   - Data recovery
+
+2. **Compliance**
+   - Security standards
+   - Data protection
+   - Privacy compliance
+   - Audit logging
+   - Security reviews
+
+## Development Process
+
+### Agile Workflow
+1. **Sprint Planning**
+   - Task breakdown
+   - Story points
+   - Sprint goals
+   - Resource allocation
+   - Risk assessment
+
+2. **Daily Process**
+   - Stand-ups
+   - Task updates
+   - Blockers resolution
+   - Code reviews
+   - Documentation
+
+### Quality Assurance
+1. **Code Quality**
+   - Linting
+   - Type checking
+   - Unit testing
+   - Integration testing
+   - Performance testing
+
+2. **Review Process**
+   - Code reviews
+   - Documentation reviews
+   - Architecture reviews
+   - Security reviews
+   - Performance reviews
+
+## Best Practices
+
+### Development
+1. **Code Organization**
+   - SOLID principles
+   - DRY principle
+   - KISS principle
+   - Clean code
+   - Maintainable code
+
+2. **Version Control**
+   - Git flow
+   - Semantic versioning
+   - Branch protection
+   - Code review process
+   - Release management
+
+### Deployment
+1. **Build Process**
+   - Automated builds
+   - Environment configuration
+   - Version management
+   - Dependency management
+   - Asset optimization
+
+2. **Release Process**
+   - Release planning
+   - Version control
+   - Deployment strategy
+   - Rollback plan
+   - Monitoring
+
+## Maintenance
+
+### Code Maintenance
+1. **Regular Tasks**
+   - Dependency updates
+   - Security patches
+   - Performance optimization
+   - Code cleanup
+   - Documentation updates
+
+2. **Technical Debt**
+   - Debt tracking
+   - Refactoring plan
+   - Legacy code handling
+   - Architecture evolution
+   - Performance improvement
+
+### System Health
+1. **Monitoring**
+   - System metrics
+   - Error tracking
+   - Performance monitoring
+   - Security monitoring
+   - User monitoring
+
+2. **Management**
+   - Resource management
+   - Capacity planning
+   - Scaling strategy
+   - Backup strategy
+   - Recovery plan

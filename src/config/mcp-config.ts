@@ -4,8 +4,8 @@ import path from 'path';
 // Constants
 const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_RETRY_DELAY = 1000;
-const DEFAULT_MAX_RETRIES = 1;
-const DEFAULT_MAX_FILE_SIZE = '10MB';
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_MAX_FILE_SIZE = '100MB';
 const DEFAULT_MAX_EXECUTION_TIME = 300000;
 
 // Server Types Enum
@@ -35,6 +35,13 @@ export enum ProcessManagerType {
   ISOLATED = 'isolated',
 }
 
+// Add new server mode enum
+export enum ServerMode {
+  STANDARD = 'standard',
+  LIGHTWEIGHT = 'lightweight',
+  DEVELOPMENT = 'development',
+}
+
 // Error Classes
 export class McpConfigError extends Error {
   constructor(message: string) {
@@ -54,6 +61,7 @@ export class McpServerError extends Error {
 const McpServerSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   type: z.nativeEnum(ServerType).default(ServerType.STDIO),
+  mode: z.nativeEnum(ServerMode).default(ServerMode.STANDARD),
   command: z.string().min(1, 'Command is required'),
   args: z.array(z.string()),
   env: z.record(z.string()).optional(),
@@ -62,6 +70,14 @@ const McpServerSchema = z.object({
       command: z.string().min(1, 'Fallback command is required'),
       args: z.array(z.string()),
       env: z.record(z.string()).optional(),
+    })
+    .optional(),
+  dynamicLoading: z
+    .object({
+      enabled: z.boolean(),
+      sourcePath: z.string().optional(),
+      watchForChanges: z.boolean().optional(),
+      hotReload: z.boolean().optional(),
     })
     .optional(),
 });
@@ -143,147 +159,271 @@ const sharedProcessEnv = {
 
 // Consolidated MCP Server Configurations
 export const mcpServers: Record<string, McpServer> = {
-  // Core Services
-  Core: {
-    description: 'Core MCP server for essential services',
+  core: {
+    description: 'Core MCP functionality and service coordination',
     type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
     args: ['cursor-mcp-installer-free@latest', 'core'],
-    env: sharedProcessEnv,
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      MAX_MEMORY: '256MB',
+      STARTUP_TIMEOUT: '30000',
+    },
   },
 
-  // Code Analysis and Generation
   codeAssistant: {
-    description: 'Code analysis and assistance',
+    description: 'Intelligent code analysis and assistance',
     type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
     args: ['cursor-mcp-installer-free@latest', 'code-assistant'],
-    env: { ...sharedProcessEnv, LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-code-assistant'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      MAX_MEMORY: '512MB',
+      ANALYSIS_TIMEOUT: '30000',
+      CACHE_SIZE: '100MB',
     },
   },
 
-  // File Operations
   fileOperations: {
-    description: 'File management and monitoring',
+    description: 'File system operations and monitoring',
     type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
     args: ['cursor-mcp-installer-free@latest', 'files'],
-    env: sharedProcessEnv,
-  },
-
-  // Version Control
-  gitTools: {
-    description: 'Version control and Git operations server',
-    type: ServerType.STDIO,
-    command: 'uvx',
-    args: ['mcp-git-tools'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-git-tools'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    env: {
+      ...sharedProcessEnv,
+      WATCH_IGNORE: 'node_modules,dist,build,.git,.cache,temp',
+      MAX_FILE_SIZE: '100MB',
+      WATCH_INTERVAL: '1000',
     },
   },
 
-  // Task Management
-  taskManager: {
-    description: 'Task management and workflow server',
-    type: ServerType.STDIO,
+  shellServer: {
+    description: 'Terminal and command execution',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
-    args: ['-y', '@kazuph/mcp-taskmanager'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-task-manager'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    args: ['cursor-mcp-installer-free@latest', 'shell'],
+    env: {
+      ...sharedProcessEnv,
+      ALLOWED_COMMANDS:
+        'git,npm,node,npx,yarn,pnpm,python,pip,powershell,cmd,docker,docker-compose',
+      MAX_EXECUTION_TIME: '300000',
+      MAX_OUTPUT_SIZE: '10MB',
     },
   },
 
-  // Documentation
-  documentation: {
-    description: 'Documentation generation and management server',
-    type: ServerType.STDIO,
+  languageServer: {
+    description: 'Language server protocol support',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
-    args: ['-y', 'documentation-mcp-server'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-documentation'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    args: ['cursor-mcp-installer-free@latest', 'lsp'],
+    env: {
+      ...sharedProcessEnv,
+      LSP_TIMEOUT: '30000',
+      SUPPORTED_LANGUAGES: 'javascript,typescript,python,json,markdown,html,css,sql,shell',
+      CACHE_SIZE: '200MB',
     },
   },
 
-  // Testing
-  testRunner: {
-    description: 'Test execution and reporting server',
-    type: ServerType.STDIO,
+  gitServer: {
+    description: 'Git operations and version control',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
-    args: ['-y', 'test-runner-mcp'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-test-runner'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    args: ['cursor-mcp-installer-free@latest', 'git'],
+    env: {
+      ...sharedProcessEnv,
+      OPERATION_TIMEOUT: '30000',
+      MAX_HISTORY_SIZE: '1000',
+      CACHE_SIZE: '50MB',
     },
   },
 
-  // Security
-  securityScanner: {
-    description: 'Security scanning and vulnerability detection server',
-    type: ServerType.STDIO,
+  debugServer: {
+    description: 'Debugging and profiling support',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
-    args: ['-y', 'security-scanner-mcp'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-security-scanner'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    args: ['cursor-mcp-installer-free@latest', 'debug'],
+    env: {
+      ...sharedProcessEnv,
+      DEBUG_PORT: '9229',
+      PROFILE_INTERVAL: '1000',
+      MAX_PROFILE_SIZE: '100MB',
     },
   },
 
-  // Performance
+  testServer: {
+    description: 'Test execution and coverage',
+    type: ServerType.STDIO,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-test-runner'],
+    env: {
+      LOG_LEVEL: LogLevel.INFO,
+      TEST_TIMEOUT: '60000',
+      MAX_COVERAGE_SIZE: '50MB',
+      HISTORY_SIZE: '100',
+    },
+  },
+
+  documentationServer: {
+    description: 'Documentation generation and management',
+    type: ServerType.STDIO,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-documentation'],
+    env: {
+      LOG_LEVEL: LogLevel.INFO,
+      OUTPUT_FORMAT: 'markdown,html',
+      MAX_FILE_SIZE: '10MB',
+      CACHE_SIZE: '50MB',
+    },
+  },
+
+  databaseServer: {
+    description: 'Database operations and management',
+    type: ServerType.STDIO,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-database'],
+    env: {
+      LOG_LEVEL: LogLevel.INFO,
+      QUERY_TIMEOUT: '30000',
+      MAX_CONNECTIONS: '10',
+      POOL_SIZE: '5',
+    },
+  },
+
+  searchServer: {
+    description: 'Enhanced code and content search with semantic capabilities',
+    type: ServerType.STDIO,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-search'],
+    env: {
+      LOG_LEVEL: LogLevel.INFO,
+      INDEX_SIZE: '500MB',
+      MAX_RESULTS: '1000',
+      UPDATE_INTERVAL: '300000',
+      SEMANTIC_SEARCH: 'true',
+      FUZZY_MATCHING: 'true',
+      LANGUAGE_DETECTION: 'true',
+      CACHE_TTL: '3600',
+    },
+  },
+
+  nextjsServer: {
+    description: 'Next.js build error handling and optimization',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['cursor-mcp-installer-free@latest', 'nextjs'],
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      BUILD_ERROR_TIMEOUT: '30000',
+      MAX_MEMORY: '512MB',
+      CACHE_SIZE: '200MB',
+      AUTO_FIX_ENABLED: 'true',
+      ERROR_AGGREGATION: 'true',
+      ERROR_REPORTING_INTERVAL: '5000',
+      SUPPORTED_FEATURES:
+        'build-errors,config-validation,performance-monitoring,auto-fix,error-aggregation',
+    },
+  },
+
+  buildOptimizer: {
+    description: 'Build optimization and caching server',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['cursor-mcp-installer-free@latest', 'build-optimizer'],
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      CACHE_DIR: '${WORKSPACE_ROOT}/.build-cache',
+      MAX_CACHE_SIZE: '1GB',
+      OPTIMIZATION_LEVEL: 'aggressive',
+      PARALLEL_BUILDS: 'true',
+      INCREMENTAL_BUILDS: 'true',
+    },
+  },
+
+  configManager: {
+    description: 'Dynamic configuration management server',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['cursor-mcp-installer-free@latest', 'config-manager'],
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      CONFIG_WATCH_INTERVAL: '1000',
+      HOT_RELOAD: 'true',
+      BACKUP_ENABLED: 'true',
+      VALIDATION_MODE: 'strict',
+      SCHEMA_PATH: '${WORKSPACE_ROOT}/config/schemas',
+    },
+  },
+
+  lightweightDev: {
+    description: 'Lightweight development MCP server',
+    type: ServerType.STDIO,
+    mode: ServerMode.LIGHTWEIGHT,
+    command: 'npx',
+    args: ['ts-node'],
+    env: {
+      LOG_LEVEL: LogLevel.DEBUG,
+      NODE_ENV: 'development',
+      HOT_RELOAD: 'true',
+      WATCH_MODE: 'true',
+    },
+    dynamicLoading: {
+      enabled: true,
+      sourcePath: '${WORKSPACE_ROOT}/src/mcp/lightweight.ts',
+      watchForChanges: true,
+      hotReload: true,
+    },
+  },
+
+  errorHandler: {
+    description: 'Enhanced error handling and reporting server',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
+    command: 'npx',
+    args: ['cursor-mcp-installer-free@latest', 'error-handler'],
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      ERROR_TRACKING: 'true',
+      NOTIFICATION_MODE: 'immediate',
+      AGGREGATION_INTERVAL: '5000',
+      MAX_ERROR_HISTORY: '1000',
+      ALERT_THRESHOLD: '10',
+    },
+  },
+
   performanceMonitor: {
-    description: 'Performance monitoring and analysis server',
-    type: ServerType.STDIO,
+    description: 'Real-time performance monitoring and optimization',
+    type: ServerType.SHARED_PROCESS,
+    mode: ServerMode.STANDARD,
     command: 'npx',
-    args: ['-y', 'performance-monitor-mcp'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-performance-monitor'],
-      env: { LOG_LEVEL: LogLevel.INFO },
-    },
-  },
-
-  // Knowledge Graph
-  knowledgeGraph: {
-    description: 'Knowledge graph and memory management server',
-    type: ServerType.STDIO,
-    command: 'npx',
-    args: ['-y', '@modelcontextprotocol/server-memory'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-knowledge-graph'],
-      env: { LOG_LEVEL: LogLevel.INFO },
-    },
-  },
-
-  // Sequential Thinking
-  sequentialThinking: {
-    description: 'Sequential thinking and reasoning server',
-    type: ServerType.STDIO,
-    command: 'npx',
-    args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
-    env: { LOG_LEVEL: LogLevel.INFO },
-    fallback: {
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
-      env: { LOG_LEVEL: LogLevel.INFO },
+    args: ['cursor-mcp-installer-free@latest', 'perf-monitor'],
+    env: {
+      ...sharedProcessEnv,
+      LOG_LEVEL: LogLevel.INFO,
+      METRICS_INTERVAL: '1000',
+      PROFILING_ENABLED: 'true',
+      HEAP_SNAPSHOT_INTERVAL: '3600000',
+      ALERT_CPU_THRESHOLD: '80',
+      ALERT_MEMORY_THRESHOLD: '85',
     },
   },
 };
@@ -303,16 +443,16 @@ export const defaultSettings: MCPConfig['settings'] = {
   detachedProcesses: true,
   singleProcess: true,
   performance: {
-    parallelInitialization: false,
-    maxConcurrentServers: 1,
-    poolSize: 1,
+    parallelInitialization: true,
+    maxConcurrentServers: 4,
+    poolSize: 2,
     singleInstance: true,
     sharedProcessManager: true,
   },
   processManager: {
     enabled: true,
     type: ProcessManagerType.SHARED,
-    maxProcesses: 1,
+    maxProcesses: 4,
     reuseProcesses: true,
     preventNewWindows: true,
     consolidateOutputs: true,
@@ -447,6 +587,36 @@ export class McpServerManager {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new McpConfigError(`Failed to load configuration: ${errorMessage}`);
     }
+  }
+
+  async loadDynamicServer(serverPath: string): Promise<void> {
+    try {
+      const serverModule = await import(serverPath);
+      const serverConfig = serverModule.default;
+
+      if (!serverConfig) {
+        throw new McpConfigError(`No default export found in ${serverPath}`);
+      }
+
+      // Validate the dynamic server configuration
+      McpServerSchema.parse(serverConfig);
+
+      // Add to servers map
+      const serverName = path.basename(serverPath, '.ts');
+      this.servers.set(serverName, serverConfig);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new McpConfigError(`Invalid dynamic server configuration: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async watchDynamicServer(serverPath: string): Promise<void> {
+    // Implementation for watching dynamic server changes
+    // This would typically use fs.watch or chokidar
+    // and reload the server when changes are detected
+    const _path = serverPath; // Acknowledge the parameter to satisfy linter
   }
 }
 

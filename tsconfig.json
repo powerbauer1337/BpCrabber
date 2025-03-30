@@ -2,10 +2,14 @@
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": false,
     "skipLibCheck": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
@@ -14,16 +18,40 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@electron/*": [
+        "src/electron/*"
+      ],
+      "@renderer/*": [
+        "src/renderer/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ]
     },
     "typeRoots": [
-      "./node_modules/@types",
-      "./src/renderer/src/types"
-    ]
+      "./src/shared/types",
+      "./node_modules/@types"
+    ],
+    "incremental": true
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

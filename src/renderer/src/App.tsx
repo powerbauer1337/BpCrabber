@@ -1,25 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Button,
-  Typography,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  CircularProgress,
-  Stack,
-  IconButton,
-  Tooltip,
-  LinearProgress,
-  ThemeProvider,
-  CssBaseline,
-  Snackbar,
-  Alert,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { Layout } from './components/Layout';
 import { LoginForm } from './components/LoginForm';
 import { DownloadQueue } from './components/DownloadQueue';
 import { UrlInput } from './components/UrlInput';
@@ -27,6 +8,7 @@ import { LogViewer } from './components/LogViewer';
 import { UpdateNotification } from './components/UpdateNotification';
 import { TrackList } from './components/TrackList';
 import { theme } from './theme';
+import { NotificationProvider, useNotifications } from './components/Notifications';
 
 // Update the window.api interface
 declare global {
@@ -57,7 +39,8 @@ interface Track {
   url: string;
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState('download');
   const [downloadQueue, setDownloadQueue] = useState<DownloadItem[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -65,10 +48,7 @@ const App: React.FC = () => {
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const [currentUrl, setCurrentUrl] = useState('https://www.beatport.com');
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [notification, setNotification] = useState<{
-    message: string;
-    severity: 'success' | 'error';
-  } | null>(null);
+  const { showError, showSuccess } = useNotifications();
 
   useEffect(() => {
     // Set up download progress listener
@@ -87,9 +67,10 @@ const App: React.FC = () => {
     // Set up error listener
     window.api.onDownloadError(error => {
       setLogs(prev => [...prev, `Error: ${error}`]);
+      showError(error);
       setIsDownloading(false);
     });
-  }, [downloadQueue]);
+  }, [downloadQueue, showError]);
 
   useEffect(() => {
     if (!webviewRef.current) return;
@@ -244,140 +225,74 @@ const App: React.FC = () => {
     setTracks(prev => {
       // Don't add if track already exists
       if (prev.some(t => t.id === track.id)) {
-        setNotification({
-          message: 'Track already in the list',
-          severity: 'error',
-        });
+        showError('Track already in the list');
         return prev;
       }
-      setNotification({
-        message: `Added "${track.title}" by ${track.artist}`,
-        severity: 'success',
-      });
+      showSuccess(`Added "${track.title}" by ${track.artist}`);
       return [...prev, track];
     });
   };
 
   const handleDownloadTracks = async (selectedTracks: Track[]) => {
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const track of selectedTracks) {
-      try {
-        await window.beatport.downloadTrack(track.url);
-        successCount++;
-      } catch (err) {
-        console.error('Failed to download track:', err);
-        failCount++;
+    try {
+      for (const track of selectedTracks) {
+        addToQueue(track.url, `${track.artist} - ${track.title}`);
       }
-    }
-
-    if (successCount > 0 || failCount > 0) {
-      const message = [
-        successCount > 0 ? `${successCount} tracks downloaded successfully` : '',
-        failCount > 0 ? `${failCount} tracks failed to download` : '',
-      ]
-        .filter(Boolean)
-        .join(', ');
-
-      setNotification({
-        message,
-        severity: failCount === 0 ? 'success' : 'error',
-      });
+      showSuccess(`Added ${selectedTracks.length} tracks to download queue`);
+      processQueue();
+    } catch (error) {
+      showError('Failed to add tracks to download queue');
+      console.error('Error adding tracks to queue:', error);
     }
   };
 
-  const handleCloseNotification = () => {
-    setNotification(null);
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'download':
+        return (
+          <>
+            <UrlInput onSubmit={addToQueue} />
+            <TrackList tracks={tracks} onDownload={handleDownloadTracks} />
+            <DownloadQueue
+              items={downloadQueue}
+              onRemove={removeFromQueue}
+              onClearCompleted={clearCompletedDownloads}
+            />
+            <LogViewer logs={logs} />
+          </>
+        );
+      case 'history':
+        return <div>Download History</div>; // TODO: Implement history view
+      case 'settings':
+        return <div>Settings</div>; // TODO: Implement settings view
+      case 'about':
+        return (
+          <div>
+            <h1>About Beatport Downloader</h1>
+            <p>Version: 1.0.0</p>
+            <p>A simple tool to download tracks from Beatport.</p>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
+    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+      {renderPage()}
+      <UpdateNotification />
+    </Layout>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box
-        sx={{
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          py: 4,
-        }}
-      >
-        <UpdateNotification />
-        <Container maxWidth="lg">
-          <Box display="flex" flexDirection="column" gap={3}>
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <LoginForm />
-            </Paper>
-
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <UrlInput onTrackDetected={handleTrackDetected} />
-            </Paper>
-
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <TrackList tracks={tracks} onDownload={handleDownloadTracks} />
-            </Paper>
-
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                minHeight: '300px',
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <DownloadQueue />
-            </Paper>
-
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                minHeight: '200px',
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-              }}
-            >
-              <LogViewer />
-            </Paper>
-          </Box>
-        </Container>
-      </Box>
-
-      <Snackbar
-        open={notification !== null}
-        autoHideDuration={6000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseNotification}
-          severity={notification?.severity || 'success'}
-          sx={{ width: '100%' }}
-        >
-          {notification?.message || ''}
-        </Alert>
-      </Snackbar>
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </ThemeProvider>
   );
 };

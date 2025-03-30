@@ -34,7 +34,7 @@ interface DownloadQueueProps {
   onClearCompleted?: () => void;
 }
 
-const DownloadQueue: React.FC<DownloadQueueProps> = ({
+export const DownloadQueue: React.FC<DownloadQueueProps> = ({
   onPause,
   onResume,
   onRemove,
@@ -188,5 +188,3 @@ const DownloadQueue: React.FC<DownloadQueueProps> = ({
     </Box>
   );
 };
-
-export default DownloadQueue;

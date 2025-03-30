@@ -1,27 +1,52 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, BrowserView } from 'electron';
 import { join } from 'path';
 import { readFileSync, writeFileSync } from 'fs';
 import { parse, stringify } from 'ini';
 import { autoUpdater } from 'electron-updater';
+import { AppError } from '../src/utils/errors';
+import { StoreSchema } from '../src/config/store';
+import { DownloadService } from '../src/services/DownloadService';
+import { store } from '../src/config/store';
 
+// Global state
 let mainWindow: BrowserWindow | null = null;
+const beatportView: BrowserView | null = null;
+const activeDownloads = new Map<string, number>();
+const isLoggedIn = false;
+
+// Initialize services
+const downloadService = new DownloadService(store.get('settings', 'downloadPath'));
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
+      nodeIntegration: false,
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
+      sandbox: true,
+      webSecurity: true,
     },
+  });
+
+  // Add CSP headers
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:;",
+        ],
+      },
+    });
   });
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
   // Setup auto-updater events
@@ -65,6 +90,78 @@ const createWindow = () => {
   });
 };
 
+// Handle beatport downloads
+ipcMain.handle('beatport:download', async (_event, url: string) => {
+  try {
+    if (!beatportView) {
+      throw new AppError('VIEW_NOT_READY', 'Beatport view is not initialized');
+    }
+
+    // Get track info first
+    const trackInfo = await beatportView.webContents.executeJavaScript(`
+      {
+        title: document.querySelector('.track-title')?.textContent?.trim() || 'Unknown Track',
+        artist: document.querySelector('.track-artist')?.textContent?.trim() || 'Unknown Artist',
+        key: document.querySelector('.track-key')?.textContent?.trim(),
+        genre: document.querySelector('.track-genre')?.textContent?.trim()
+      }
+    `);
+
+    // Update download tracking
+    activeDownloads.set(url, 0);
+
+    // Send track info to renderer
+    if (mainWindow) {
+      mainWindow.webContents.send('download:progress', {
+        url,
+        progress: 0,
+        trackInfo,
+      });
+    }
+
+    return { success: true, trackInfo };
+  } catch (error: unknown) {
+    if (error instanceof AppError) {
+      throw { code: error.name, message: error.message };
+    }
+    throw {
+      code: 'UNKNOWN_ERROR',
+      message: error instanceof Error ? error.message : 'An unknown error occurred',
+    };
+  }
+});
+
+// Handle login
+ipcMain.handle('login', async (_event, _email: string, _password: string) => {
+  try {
+    // TODO: Implement actual login logic
+    return { success: true };
+  } catch (error) {
+    const errorMetadata: ErrorMetadata = {
+      code: 'AUTH_ERROR',
+      message: 'Login failed. Please check your credentials.',
+    };
+    console.error('Login failed:', errorMetadata);
+    return { success: false, error: errorMetadata };
+  }
+});
+
+// Handle settings
+ipcMain.handle('settings:save', async (_event, settings: StoreSchema['settings']) => {
+  try {
+    store.set('settings', {
+      ...store.get('settings'),
+      ...settings,
+    });
+    downloadService.setDownloadPath(settings.downloadPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Settings save failed:', error);
+    throw { code: 'SETTINGS_ERROR', message: 'Failed to save settings' };
+  }
+});
+
+// App lifecycle
 app.whenReady().then(() => {
   createWindow();
 
@@ -87,12 +184,18 @@ app.on('window-all-closed', () => {
 });
 
 // IPC handlers for beatportdl integration
-ipcMain.handle('beatport:login', async (_event, { email, password }) => {
+ipcMain.handle('detect-tracks', async (_event, _url: string) => {
   try {
-    // TODO: Implement beatportdl login
-    return { success: true };
+    // TODO: Implement actual track detection logic
+    return {
+      id: Math.random().toString(36).substring(7),
+      title: 'Sample Track',
+      artist: 'Sample Artist',
+      url: _url,
+    };
   } catch (error) {
-    return { success: false, error: (error as Error).message };
+    console.error('Track detection failed:', error);
+    throw error;
   }
 });
 
@@ -106,15 +209,6 @@ ipcMain.handle('beatport:fetch-metadata', async (_event, url: string) => {
         artist: 'Sample Artist',
       },
     };
-  } catch (error) {
-    return { success: false, error: (error as Error).message };
-  }
-});
-
-ipcMain.handle('beatport:download', async (_event, { url, config }) => {
-  try {
-    // TODO: Implement beatportdl download
-    return { success: true };
   } catch (error) {
     return { success: false, error: (error as Error).message };
   }

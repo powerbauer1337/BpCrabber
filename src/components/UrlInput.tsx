@@ -26,7 +26,7 @@ interface UrlInputProps {
   onTrackDetected: (track: Track) => void;
 }
 
-const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
+export const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,5 +164,3 @@ const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
     </Box>
   );
 };
-
-export default UrlInput;

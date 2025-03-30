@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { IpcChannels, IpcRendererHandlers } from '../shared/ipc/types';
 
 // Helper function to extract track ID from Beatport URL
 const extractTrackId = (url: string) => {
@@ -68,6 +69,32 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI);
     contextBridge.exposeInMainWorld('beatport', api);
+    contextBridge.exposeInMainWorld('electron', {
+      // IPC Send/Invoke Methods
+      login: (username: string, password: string) =>
+        ipcRenderer.invoke(IpcChannels.LOGIN, username, password),
+      logout: () => ipcRenderer.invoke(IpcChannels.LOGOUT),
+      getTrackInfo: (url: string) => ipcRenderer.invoke(IpcChannels.GET_TRACK_INFO, url),
+      downloadTrack: (url: string) => ipcRenderer.invoke(IpcChannels.DOWNLOAD_TRACK, url),
+      cancelDownload: (url: string) => ipcRenderer.invoke(IpcChannels.CANCEL_DOWNLOAD, url),
+      getDownloadProgress: () => ipcRenderer.invoke(IpcChannels.GET_DOWNLOAD_PROGRESS),
+      getSettings: () => ipcRenderer.invoke(IpcChannels.GET_SETTINGS),
+      saveSettings: (settings: any) => ipcRenderer.invoke(IpcChannels.SAVE_SETTINGS, settings),
+      checkUpdates: () => ipcRenderer.invoke(IpcChannels.CHECK_UPDATES),
+      getLogs: () => ipcRenderer.invoke(IpcChannels.GET_LOGS),
+
+      // IPC Event Listeners
+      onDownloadProgress: (callback: IpcRendererHandlers[typeof IpcChannels.DOWNLOAD_PROGRESS]) =>
+        ipcRenderer.on(IpcChannels.DOWNLOAD_PROGRESS, (_, progress) => callback(progress)),
+      onDownloadComplete: (callback: IpcRendererHandlers[typeof IpcChannels.DOWNLOAD_COMPLETE]) =>
+        ipcRenderer.on(IpcChannels.DOWNLOAD_COMPLETE, (_, result) => callback(result)),
+      onDownloadError: (callback: IpcRendererHandlers[typeof IpcChannels.DOWNLOAD_ERROR]) =>
+        ipcRenderer.on(IpcChannels.DOWNLOAD_ERROR, (_, error) => callback(error)),
+      onUpdateAvailable: (callback: IpcRendererHandlers[typeof IpcChannels.UPDATE_AVAILABLE]) =>
+        ipcRenderer.on(IpcChannels.UPDATE_AVAILABLE, (_, info) => callback(info)),
+      onUpdateDownloaded: (callback: IpcRendererHandlers[typeof IpcChannels.UPDATE_DOWNLOADED]) =>
+        ipcRenderer.on(IpcChannels.UPDATE_DOWNLOADED, (_, info) => callback(info)),
+    });
   } catch (error) {
     console.error(error);
   }
