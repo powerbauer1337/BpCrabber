@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
-import { DownloadManager } from '../utils/download';
-import type { DownloadOptions } from '../utils/download';
-import { logger } from '../utils/logger';
-import path from 'path';
+import { downloadUtils } from '../utils/downloadUtils';
+import { logger } from '@electron/utils/logger';
 
 // Validation schemas
 const beatportTrackSchema = z.object({
@@ -36,7 +34,6 @@ type SearchResponse = z.infer<typeof searchResponseSchema>;
 
 export class BeatportService {
   private apiClient: ReturnType<typeof axios.create>;
-  private downloadManager: DownloadManager;
   private tokenExpiresAt: number = 0;
   private accessToken: string = '';
 
@@ -45,7 +42,6 @@ export class BeatportService {
       baseURL: 'https://api.beatport.com/v4',
       timeout: 10000,
     });
-    this.downloadManager = new DownloadManager();
 
     // Add response interceptor for error handling
     this.apiClient.interceptors.response.use(
@@ -54,9 +50,9 @@ export class BeatportService {
         if (error.response) {
           const status = error.response.status || 500;
           const message = error.response.data?.message || 'An error occurred with Beatport API';
-          throw new AppError(status, message);
+          throw new AppError(message, status);
         }
-        throw new AppError(500, 'Failed to connect to Beatport API');
+        throw new AppError('Failed to connect to Beatport API', 500);
       }
     );
   }
@@ -75,7 +71,7 @@ export class BeatportService {
       const apiSecret = process.env.BEATPORT_API_SECRET;
 
       if (!apiKey || !apiSecret) {
-        throw new AppError(500, 'Beatport API credentials not configured');
+        throw new AppError('Beatport API credentials not configured', 500);
       }
 
       const response = await this.apiClient.post('/auth/token', {
@@ -91,7 +87,7 @@ export class BeatportService {
       return this.accessToken;
     } catch (error) {
       logger.error('Failed to get Beatport auth token:', error);
-      throw new AppError(401, 'Failed to authenticate with Beatport API');
+      throw new AppError('Failed to authenticate with Beatport API', 401);
     }
   }
 
@@ -121,11 +117,11 @@ export class BeatportService {
     } catch (error) {
       if (error instanceof z.ZodError) {
         logger.error('Invalid track data from Beatport:', error);
-        throw new AppError(400, 'Invalid track data received from Beatport');
+        throw new AppError('Invalid track data received from Beatport', 400);
       }
       if (error instanceof AppError) throw error;
       logger.error('Failed to search Beatport tracks:', error);
-      throw new AppError(500, 'Failed to search tracks on Beatport');
+      throw new AppError('Failed to search tracks on Beatport', 500);
     }
   }
 
@@ -148,11 +144,11 @@ export class BeatportService {
     } catch (error) {
       if (error instanceof z.ZodError) {
         logger.error('Invalid track data from Beatport:', error);
-        throw new AppError(400, 'Invalid track data received from Beatport');
+        throw new AppError('Invalid track data received from Beatport', 400);
       }
       if (error instanceof AppError) throw error;
       logger.error('Failed to fetch Beatport track:', error);
-      throw new AppError(500, 'Failed to fetch track from Beatport');
+      throw new AppError('Failed to fetch track from Beatport', 500);
     }
   }
 
@@ -164,10 +160,9 @@ export class BeatportService {
       const track = await this.getTrackById(beatportId);
 
       if (!track.downloadUrl) {
-        throw new AppError(400, 'Track download URL not available');
+        throw new AppError('Track download URL not available', 400);
       }
 
-      const token = await this.getAuthToken();
       const filename =
         `${track.artist} - ${track.title}${track.mix ? ` (${track.mix})` : ''}.${format}`.replace(
           /[/\\?%*:|"<>]/g,
@@ -175,24 +170,18 @@ export class BeatportService {
         );
 
       const downloadUrl = `${track.downloadUrl}?format=${format}`;
-      const downloadDir = process.env.UPLOAD_DIR || 'uploads';
-      const filePath = path.join(downloadDir, filename);
+      const result = await downloadUtils.downloadFile(downloadUrl, filename);
 
-      const downloadOptions: DownloadOptions = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
-        },
-      };
-
-      await this.downloadManager.downloadFile(downloadUrl, filePath, downloadOptions);
+      if (!result.success || !result.filePath) {
+        throw new AppError(result.error || 'Failed to download track', 500);
+      }
 
       logger.info(`Successfully downloaded track: ${filename}`);
-      return filePath;
+      return result.filePath;
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.error('Failed to download track:', error);
-      throw new AppError(500, 'Failed to download track from Beatport');
+      throw new AppError('Failed to download track from Beatport', 500);
     }
   }
 
@@ -200,25 +189,20 @@ export class BeatportService {
    * Get preview stream URL for a track
    */
   async getPreviewUrl(beatportId: string): Promise<string> {
-    try {
-      const track = await this.getTrackById(beatportId);
-
-      if (!track.previewUrl) {
-        throw new AppError(400, 'Track preview not available');
-      }
-
-      return track.previewUrl;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      logger.error('Failed to get track preview URL:', error);
-      throw new AppError(500, 'Failed to get track preview URL');
+    const track = await this.getTrackById(beatportId);
+    if (!track.previewUrl) {
+      throw new AppError('Track preview URL not available', 400);
     }
+    return track.previewUrl;
   }
 
   /**
    * Clean up downloaded files
    */
   async cleanupDownloads(): Promise<void> {
-    await this.downloadManager.cleanupDownloads();
+    const result = await downloadUtils.cleanupDownloads();
+    if (!result.success) {
+      throw new AppError(result.error || 'Failed to cleanup downloads', 500);
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { app, dialog } from 'electron';
-import { logger } from '../utils/logger';
+import { logger } from '@electron/utils/logger';
 
 export function setupErrorHandlers() {
   // Handle uncaught exceptions in the main process

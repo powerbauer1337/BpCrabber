@@ -1,33 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-const { beforeAll, afterAll } = require('@jest/globals');
-import { app, BrowserWindow } from 'electron';
-
-// Create a new Prisma client for tests
-const prisma = new PrismaClient();
-
-beforeAll(async () => {
-  // Connect to the test database
-  await prisma.$connect();
-});
-
-afterAll(async () => {
-  // Disconnect from the test database
-  await prisma.$disconnect();
-});
-
-export { prisma };
+import { jest } from '@jest/globals';
 
 // Mock Electron
-jest.mock('electron', () => ({
+const mockElectron = {
   app: {
     getPath: jest.fn().mockReturnValue('/mock/path'),
     quit: jest.fn(),
     on: jest.fn(),
-    whenReady: jest.fn().mockResolvedValue(undefined),
+    whenReady: jest.fn().mockResolvedValue(),
   },
-  BrowserWindow: jest.fn().mockImplementation(() => ({
-    loadURL: jest.fn().mockResolvedValue(undefined),
-    loadFile: jest.fn().mockResolvedValue(undefined),
+  BrowserWindow: jest.fn().mockImplementation((url: string) => ({
+    loadURL: jest.fn().mockResolvedValue(url),
+    loadFile: jest.fn().mockResolvedValue(),
     on: jest.fn(),
     webContents: {
       on: jest.fn(),
@@ -36,7 +19,7 @@ jest.mock('electron', () => ({
       setWindowOpenHandler: jest.fn(),
     },
     show: jest.fn(),
-  })),
+  })) as jest.Mock,
   ipcMain: {
     on: jest.fn(),
     handle: jest.fn(),
@@ -57,6 +40,39 @@ jest.mock('electron', () => ({
       },
     },
   },
+} as const;
+
+jest.mock('electron', () => mockElectron);
+
+// Mock Prisma
+const mockPrismaClient = jest.fn().mockImplementation(() => ({
+  user: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  track: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  playlist: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  $connect: jest.fn(),
+  $disconnect: jest.fn(),
+})) as jest.Mock;
+
+jest.mock('@prisma/client', () => ({
+  PrismaClient: mockPrismaClient,
 }));
 
 // Mock electron-log
@@ -112,3 +128,8 @@ jest.mock('node-fetch', () =>
 
 // Set up environment variables
 process.env.NODE_ENV = 'test';
+process.env.LOG_LEVEL = 'error';
+process.env.ELECTRON_RUN_AS_NODE = '1';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.JWT_EXPIRES_IN = '1h';

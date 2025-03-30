@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
-import { AppError, ErrorCode } from '../utils/errors';
-import { getConfig } from '../config/config';
-import { logger } from '../utils/logger';
+import { NetworkError } from '@shared/utils/errors';
+import { getConfig } from '@config/config';
+import { logger } from '@electron/utils/logger';
 
 interface RateLimitOptions {
   windowMs?: number;
@@ -16,12 +16,7 @@ const defaultOptions: Required<RateLimitOptions> = {
   max: 100, // 100 requests per windowMs
   keyPrefix: 'rate-limit:',
   handler: (_req: Request, _res: Response, next: NextFunction) => {
-    next(
-      new AppError('Too many requests, please try again later.', {
-        code: ErrorCode.NETWORK,
-        statusCode: 429,
-      })
-    );
+    next(new NetworkError('Too many requests, please try again later.'));
   },
 };
 
@@ -92,12 +87,7 @@ class RateLimiterRedis {
           this.options.handler(req, res, next);
         } else {
           res.status(429);
-          next(
-            new AppError('Too many requests, please try again later.', {
-              code: ErrorCode.NETWORK,
-              statusCode: 429,
-            })
-          );
+          next(new NetworkError('Too many requests, please try again later.'));
         }
         return;
       }

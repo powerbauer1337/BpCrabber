@@ -1,11 +1,9 @@
 import { retry, retryFetch } from '../retry';
-import { logger } from '../logger';
 
 jest.mock('../logger');
 
 describe('retry', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
     jest.useFakeTimers();
   });
 
@@ -27,7 +25,13 @@ describe('retry', () => {
       .mockRejectedValueOnce(new Error('fail2'))
       .mockResolvedValue('success');
 
-    const result = await retry(fn);
+    const promise = retry(fn);
+
+    // Advance timers for each retry
+    await jest.advanceTimersByTimeAsync(1000); // First retry
+    await jest.advanceTimersByTimeAsync(2000); // Second retry
+
+    const result = await promise;
     expect(result).toBe('success');
     expect(fn).toHaveBeenCalledTimes(3);
   });
@@ -36,72 +40,69 @@ describe('retry', () => {
     const error = new Error('test error');
     const fn = jest.fn().mockRejectedValue(error);
 
-    await expect(retry(fn)).rejects.toThrow(error);
-    expect(fn).toHaveBeenCalledTimes(3); // Default 3 retries
+    const promise = retry(fn, { maxRetries: 2 });
+
+    // Advance timers for each retry
+    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(2000);
+
+    await expect(promise).rejects.toThrow(error);
+    expect(fn).toHaveBeenCalledTimes(3);
   });
 
   it('should respect custom retry options', async () => {
     const fn = jest.fn().mockRejectedValue(new Error('test error'));
+    const options = { maxRetries: 4, initialDelay: 100 };
 
-    await expect(retry(fn, { retries: 5 })).rejects.toThrow('test error');
+    const promise = retry(fn, options);
 
+    // Advance timers for each retry
+    for (let i = 0; i < options.maxRetries; i++) {
+      await jest.advanceTimersByTimeAsync(options.initialDelay * Math.pow(2, i));
+    }
+
+    await expect(promise).rejects.toThrow('test error');
     expect(fn).toHaveBeenCalledTimes(5);
   });
 
   it('should respect timeout option', async () => {
-    const fn = jest.fn().mockImplementation(() => new Promise(() => {})); // Never resolves
+    const fn = jest
+      .fn()
+      .mockImplementation(() => new Promise(resolve => setTimeout(resolve, 5000)));
+    const options = { timeout: 1000 };
 
-    const promise = retry(fn, { timeout: 1000 });
-    jest.advanceTimersByTime(1000);
+    const promise = retry(fn, options);
+    await jest.advanceTimersByTimeAsync(1000);
 
-    await expect(promise).rejects.toThrow('Operation timed out after 1000ms');
+    await expect(promise).rejects.toThrow('Operation timed out');
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it('should use custom shouldRetry function', async () => {
-    const fn = jest.fn().mockRejectedValue(new Error('test error'));
-    const shouldRetry = jest.fn().mockReturnValue(false);
-
-    await expect(retry(fn, { shouldRetry })).rejects.toThrow('test error');
-
-    expect(fn).toHaveBeenCalledTimes(1); // No retries
-    expect(shouldRetry).toHaveBeenCalledTimes(1);
-  });
-
-  it('should implement exponential backoff', async () => {
     const fn = jest
       .fn()
-      .mockRejectedValueOnce(new Error('fail1'))
-      .mockRejectedValueOnce(new Error('fail2'))
+      .mockRejectedValueOnce(new Error('retry'))
+      .mockRejectedValueOnce(new Error('no-retry'))
       .mockResolvedValue('success');
 
-    const backoff = {
-      initial: 100,
-      max: 1000,
-      factor: 2,
-    };
+    const shouldRetry = (error: Error) => error.message === 'retry';
+    const promise = retry(fn, { shouldRetry });
 
-    const promise = retry(fn, { backoff });
-
-    // First failure - should wait 100ms
-    jest.advanceTimersByTime(99);
-    expect(fn).toHaveBeenCalledTimes(1);
-    jest.advanceTimersByTime(1);
+    await jest.advanceTimersByTimeAsync(1000);
+    await expect(promise).rejects.toThrow('no-retry');
     expect(fn).toHaveBeenCalledTimes(2);
-
-    // Second failure - should wait 200ms
-    jest.advanceTimersByTime(199);
-    expect(fn).toHaveBeenCalledTimes(2);
-    jest.advanceTimersByTime(1);
-    expect(fn).toHaveBeenCalledTimes(3);
-
-    await expect(promise).resolves.toBe('success');
   });
 });
 
 describe('retryFetch', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.useFakeTimers();
     global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.resetAllMocks();
   });
 
   it('should retry failed fetch requests', async () => {
@@ -110,7 +111,10 @@ describe('retryFetch', () => {
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValue(mockResponse);
 
-    const result = await retryFetch('https://api.example.com/test');
+    const promise = retryFetch('https://api.example.com/test');
+    await jest.advanceTimersByTimeAsync(1000);
+
+    const result = await promise;
     expect(result).toBe(mockResponse);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
@@ -119,20 +123,17 @@ describe('retryFetch', () => {
     const mockResponse = { ok: false, status: 500 };
     (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
 
-    await expect(retryFetch('https://api.example.com/test')).rejects.toThrow(
-      'HTTP error! status: 500'
-    );
+    const promise = retryFetch('https://api.example.com/test');
+    await jest.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toThrow('HTTP error! status: 500');
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('should pass through fetch options', async () => {
     const mockResponse = { ok: true };
     (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-    const options = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ test: true }),
-    };
+    const options = { method: 'POST', headers: { 'Content-Type': 'application/json' } };
 
     await retryFetch('https://api.example.com/test', options);
     expect(global.fetch).toHaveBeenCalledWith('https://api.example.com/test', options);

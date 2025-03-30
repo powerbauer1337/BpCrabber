@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler';
-import { randomBytes } from 'crypto';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -233,7 +233,7 @@ export class AuthService {
     const accessToken = this.generateAccessToken(userId);
 
     // Generate refresh token
-    const refreshToken = randomBytes(40).toString('hex');
+    const refreshToken = crypto.randomBytes(40).toString('hex');
 
     // Store refresh token
     await prisma.refreshToken.create({

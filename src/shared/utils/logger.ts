@@ -1,62 +1,27 @@
-import { createLogger, format, transports } from 'winston';
-import { join } from 'path';
+import winston from 'winston';
+import path from 'path';
 import { app } from 'electron';
 
-const LOG_DIR = process.env.LOG_DIR || join(app?.getPath('userData') || process.cwd(), 'logs');
+const LOG_DIR = process.env.LOG_DIR || path.join(app?.getPath('userData') || process.cwd(), 'logs');
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB per MCP config
 const MAX_FILES = 5;
 
-// Custom format for log entries
-const logFormat = format.combine(
-  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  format.errors({ stack: true }),
-  format.splat(),
-  format.json()
-);
+const logFile = path.join(LOG_DIR, 'app.log');
 
-// Create logger instance
-export const logger = createLogger({
+const logger = winston.createLogger({
   level: LOG_LEVEL,
-  format: logFormat,
-  defaultMeta: {
-    app: 'beatport-downloader',
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-  },
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
-    // Console transport for development with pretty format
-    new transports.Console({
-      format: format.combine(
-        format.colorize(),
-        format.printf(({ timestamp, level, message, ...meta }) => {
-          const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-          return `${timestamp} [${level}]: ${message} ${metaStr}`;
-        })
-      ),
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
-    // File transport for errors
-    new transports.File({
-      filename: join(LOG_DIR, 'error.log'),
-      level: 'error',
-      maxsize: MAX_FILE_SIZE,
-      maxFiles: MAX_FILES,
-      tailable: true,
-      format: format.combine(format.timestamp(), format.json()),
-    }),
-    // File transport for combined logs
-    new transports.File({
-      filename: join(LOG_DIR, 'combined.log'),
-      maxsize: MAX_FILE_SIZE,
-      maxFiles: MAX_FILES,
-      tailable: true,
-      format: format.combine(format.timestamp(), format.json()),
+    new winston.transports.File({
+      filename: logFile,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
     }),
   ],
-  // Handle exceptions and rejections
-  handleExceptions: true,
-  handleRejections: true,
-  exitOnError: false,
 });
 
 // Add request context tracking
@@ -126,3 +91,5 @@ export const logMetric = (
 // Export types for better type safety
 export type Logger = typeof logger;
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+export { logger };

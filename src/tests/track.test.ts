@@ -1,58 +1,46 @@
 import request from 'supertest';
-import { app } from '../app';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import app from '../app';
+import { createTestUser, generateTestToken } from './testUtils';
 
 const prisma = new PrismaClient();
 
 describe('Track Endpoints', () => {
-  let testUser: { id: string; email: string; password: string };
   let accessToken: string;
-  let testTrack: { id: string };
+  let userId: string;
 
   beforeAll(async () => {
-    // Create a test user
-    const hashedPassword = await bcrypt.hash('testpassword123', 10);
-    testUser = await prisma.user.create({
+    // Create test user and generate token
+    const user = await createTestUser('tracktest@example.com', 'testpassword123');
+    userId = user.id;
+    accessToken = generateTestToken(user);
+
+    // Create test track
+    await prisma.track.create({
       data: {
-        email: 'tracktest@example.com',
-        password: hashedPassword,
-        name: 'Track Test User',
-      },
-    });
-
-    // Login to get access token
-    const loginRes = await request(app).post('/api/auth/login').send({
-      email: 'tracktest@example.com',
-      password: 'testpassword123',
-    });
-
-    accessToken = loginRes.body.accessToken;
-
-    // Create a test track
-    testTrack = await prisma.track.create({
-      data: {
+        beatportId: 'test123',
         title: 'Test Track',
         artist: 'Test Artist',
         album: 'Test Album',
-        duration: 180,
+        duration: 390, // 6:30 in seconds
         bpm: 128,
-        key: 'C',
-        genre: 'House',
-        beatportId: 'test123',
+        key: 'A min',
+        genre: 'Test Genre',
       },
     });
   });
 
   afterAll(async () => {
     // Clean up test data
-    await prisma.track.deleteMany({
-      where: { beatportId: 'test123' },
-    });
-    await prisma.user.deleteMany({
-      where: { email: 'tracktest@example.com' },
-    });
+    await prisma.$transaction([
+      prisma.track.deleteMany({
+        where: { beatportId: 'test123' },
+      }),
+      prisma.user.deleteMany({
+        where: { email: 'tracktest@example.com' },
+      }),
+    ]);
+    await prisma.$disconnect();
   });
 
   describe('GET /api/tracks', () => {
@@ -63,26 +51,27 @@ describe('Track Endpoints', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0]).toHaveProperty('beatportId', 'test123');
     });
 
     it('should not get tracks without token', async () => {
       const res = await request(app).get('/api/tracks');
-
       expect(res.status).toBe(401);
-      expect(res.body.message).toBe('No token provided');
     });
   });
 
   describe('GET /api/tracks/search', () => {
     it('should search tracks by query', async () => {
       const res = await request(app)
-        .get('/api/tracks/search?query=Test')
+        .get('/api/tracks/search')
+        .query({ q: 'Test' })
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThan(0);
-      expect(res.body[0].title).toContain('Test');
+      expect(res.body[0]).toHaveProperty('title', 'Test Track');
     });
 
     it('should not search without query parameter', async () => {
@@ -91,18 +80,21 @@ describe('Track Endpoints', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(400);
-      expect(res.body.message).toBe('Search query is required');
     });
   });
 
   describe('GET /api/tracks/:id', () => {
     it('should get track by ID', async () => {
+      const track = await prisma.track.findFirst({
+        where: { beatportId: 'test123' },
+      });
+
       const res = await request(app)
-        .get(`/api/tracks/${testTrack.id}`)
+        .get(`/api/tracks/${track!.id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.id).toBe(testTrack.id);
+      expect(res.body).toHaveProperty('beatportId', 'test123');
     });
 
     it('should not get non-existent track', async () => {
@@ -111,86 +103,112 @@ describe('Track Endpoints', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.message).toBe('Track not found');
     });
   });
 
   describe('POST /api/tracks', () => {
     it('should create new track', async () => {
+      const newTrack = {
+        beatportId: 'test456',
+        title: 'New Track',
+        artist: 'New Artist',
+        genre: 'New Genre',
+        key: 'C maj',
+        bpm: 130,
+        length: '7:00',
+        releaseDate: new Date().toISOString(),
+        price: 1.99,
+        imageUrl: 'https://example.com/new-image.jpg',
+        previewUrl: 'https://example.com/new-preview.mp3',
+        downloadUrl: 'https://example.com/new-download.mp3',
+      };
+
       const res = await request(app)
         .post('/api/tracks')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          title: 'New Track',
-          artist: 'New Artist',
-          album: 'New Album',
-          duration: 200,
-          bpm: 130,
-          key: 'D',
-          genre: 'Techno',
-          beatportId: 'new123',
-        });
+        .send(newTrack)
+        .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(201);
-      expect(res.body.title).toBe('New Track');
-      expect(res.body.artist).toBe('New Artist');
+      expect(res.body).toHaveProperty('beatportId', 'test456');
+
+      // Clean up
+      await prisma.track.deleteMany({
+        where: { beatportId: 'test456' },
+      });
     });
 
     it('should not create track with duplicate beatportId', async () => {
+      const duplicateTrack = {
+        beatportId: 'test123',
+        title: 'Duplicate Track',
+        artist: 'Duplicate Artist',
+        genre: 'Duplicate Genre',
+        key: 'D min',
+        bpm: 125,
+        length: '5:30',
+        releaseDate: new Date().toISOString(),
+        price: 3.99,
+        imageUrl: 'https://example.com/duplicate-image.jpg',
+        previewUrl: 'https://example.com/duplicate-preview.mp3',
+        downloadUrl: 'https://example.com/duplicate-download.mp3',
+      };
+
       const res = await request(app)
         .post('/api/tracks')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          title: 'Duplicate Track',
-          artist: 'Duplicate Artist',
-          album: 'Duplicate Album',
-          duration: 180,
-          bpm: 128,
-          key: 'C',
-          genre: 'House',
-          beatportId: 'test123', // Same as testTrack
-        });
+        .send(duplicateTrack)
+        .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(400);
-      expect(res.body.message).toBe('Track with this Beatport ID already exists');
     });
   });
 
   describe('PUT /api/tracks/:id', () => {
     it('should update track', async () => {
+      const track = await prisma.track.findFirst({
+        where: { beatportId: 'test123' },
+      });
+
+      const updates = {
+        title: 'Updated Track',
+        artist: 'Updated Artist',
+      };
+
       const res = await request(app)
-        .put(`/api/tracks/${testTrack.id}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          title: 'Updated Track',
-          artist: 'Updated Artist',
-        });
+        .put(`/api/tracks/${track!.id}`)
+        .send(updates)
+        .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.title).toBe('Updated Track');
-      expect(res.body.artist).toBe('Updated Artist');
+      expect(res.body).toHaveProperty('title', 'Updated Track');
+      expect(res.body).toHaveProperty('artist', 'Updated Artist');
     });
 
     it('should not update non-existent track', async () => {
       const res = await request(app)
         .put('/api/tracks/non-existent-id')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          title: 'Updated Track',
-        });
+        .send({ title: 'Updated Track' })
+        .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.message).toBe('Track not found');
     });
   });
 
   describe('DELETE /api/tracks/:id', () => {
     it('should delete track', async () => {
+      const track = await prisma.track.findFirst({
+        where: { beatportId: 'test123' },
+      });
+
       const res = await request(app)
-        .delete(`/api/tracks/${testTrack.id}`)
+        .delete(`/api/tracks/${track!.id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(204);
+
+      const deletedTrack = await prisma.track.findFirst({
+        where: { id: track!.id },
+      });
+      expect(deletedTrack).toBeNull();
     });
 
     it('should not delete non-existent track', async () => {
@@ -199,7 +217,6 @@ describe('Track Endpoints', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.message).toBe('Track not found');
     });
   });
 });

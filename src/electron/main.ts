@@ -1,12 +1,13 @@
 import { app, BrowserWindow, BrowserView, ipcMain } from 'electron';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { autoUpdater } from 'electron-updater/out/main.js';
+import pkg from 'electron-updater/out/main.js';
+const { autoUpdater } = pkg;
 import { store, STORE_KEYS } from '@config/store';
 import { DownloadService } from '@shared/services/downloadService';
 import { createSecurityHeaders } from './utils/security';
 import { setupIpcHandlers } from './ipc/handlers';
-import { logger } from '@shared/utils/logger';
+import { logger } from '@electron/utils/logger';
 import { DownloadQueue } from '@shared/services/downloadQueue';
 import type { TrackInfo, DownloadHistory } from '@shared/types';
 import { is } from '@electron-toolkit/utils';
@@ -165,7 +166,7 @@ function createWindow() {
   if (is.dev) {
     // In development, use dev server
     mainWindow.loadURL('http://localhost:5173').catch(() => {
-      console.log('Failed to load dev server, retrying...');
+      logger.info('Failed to load dev server, retrying...');
       // Retry after a short delay
       setTimeout(() => mainWindow.loadURL('http://localhost:5173'), 1000);
     });
@@ -173,7 +174,7 @@ function createWindow() {
   } else {
     // In production, load the built static files
     mainWindow.loadFile(join(__dirname, '../renderer/index.html')).catch(err => {
-      console.error('Failed to load production files:', err);
+      logger.error('Failed to load production files:', err);
     });
   }
 
@@ -191,7 +192,7 @@ function createWindow() {
 
   // Log any load failures
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Failed to load:', errorCode, errorDescription);
+    logger.error('Failed to load:', { errorCode, errorDescription });
     if (is.dev) {
       // In dev, retry loading
       setTimeout(() => mainWindow.loadURL('http://localhost:5173'), 1000);

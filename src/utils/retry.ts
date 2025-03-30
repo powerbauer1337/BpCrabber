@@ -1,71 +1,64 @@
-import { securityConfig } from '../config/security';
-import { logger } from './logger';
+import { logger } from '../utils/logger';
 
 interface RetryOptions {
   retries?: number;
+  maxRetries?: number; // Alias for retries
+  initialDelay?: number;
   timeout?: number;
+  shouldRetry?: (error: Error) => boolean;
   backoff?: {
     initial: number;
     max: number;
     factor: number;
   };
-  shouldRetry?: (error: Error) => boolean;
 }
 
 const defaultOptions: Required<RetryOptions> = {
-  retries: securityConfig.api.retries,
-  timeout: securityConfig.api.timeout,
-  backoff: securityConfig.api.backoff,
-  shouldRetry: (error: Error) => {
-    // Retry on network errors and 5xx server errors
-    if (error instanceof TypeError && error.message.includes('network')) {
-      return true;
-    }
-    if ('status' in error && typeof (error as any).status === 'number') {
-      return (error as any).status >= 500;
-    }
-    return false;
+  retries: 2,
+  maxRetries: 2,
+  initialDelay: 100,
+  timeout: 10000,
+  shouldRetry: () => true,
+  backoff: {
+    initial: 100,
+    max: 1000,
+    factor: 2,
   },
 };
 
 export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const opts = { ...defaultOptions, ...options };
+  const retries = opts.maxRetries || opts.retries;
+  const initialDelay = opts.initialDelay || opts.backoff.initial;
   let lastError: Error;
   let attempt = 0;
 
-  while (attempt < opts.retries) {
+  while (attempt < retries) {
     try {
       // Add timeout to the operation
-      const result = await Promise.race([
-        fn(),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(`Operation timed out after ${opts.timeout}ms`));
-          }, opts.timeout);
-        }),
-      ]);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Operation timed out')), opts.timeout);
+      });
 
-      return result;
+      return await Promise.race([fn(), timeoutPromise]);
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      lastError = error as Error;
 
-      // Check if we should retry
       if (!opts.shouldRetry(lastError)) {
-        logger.error('Operation failed, not retrying:', lastError);
-        throw lastError;
+        break;
       }
 
       attempt++;
 
-      if (attempt < opts.retries) {
-        // Calculate backoff delay
+      if (attempt < retries) {
+        // Calculate backoff delay using initialDelay
         const backoffMs = Math.min(
-          opts.backoff.initial * Math.pow(opts.backoff.factor, attempt - 1),
+          initialDelay * Math.pow(opts.backoff.factor, attempt - 1),
           opts.backoff.max
         );
 
         logger.warn(
-          `Operation failed, retrying in ${backoffMs}ms (attempt ${attempt}/${opts.retries}):`,
+          `Operation failed, retrying in ${backoffMs}ms (attempt ${attempt}/${retries}):`,
           lastError
         );
 
@@ -74,7 +67,7 @@ export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {})
     }
   }
 
-  logger.error(`Operation failed after ${opts.retries} attempts:`, lastError!);
+  logger.error(`Operation failed after ${retries} attempts:`, lastError!);
   throw lastError!;
 }
 

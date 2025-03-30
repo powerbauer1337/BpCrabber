@@ -5,10 +5,10 @@
 
 import log from 'electron-log';
 import { app } from 'electron';
-import { join } from 'path';
+import path from 'path';
 
 // Configure electron-log
-log.transports.file.resolvePathFn = () => join(app.getPath('userData'), 'logs/main.log');
+log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs/main.log');
 log.transports.file.maxSize = 1024 * 1024 * 10; // 10MB
 log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
 

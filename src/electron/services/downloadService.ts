@@ -1,27 +1,46 @@
-import { DownloadProgress, DownloadResult, TrackInfo } from '../../shared/ipc/types';
-import { DownloadError } from '../../shared/utils/errors';
+import { EventEmitter } from 'events';
+import fetch from 'node-fetch';
+import { createWriteStream, promises as fs } from 'fs';
+import { pipeline } from 'stream/promises';
+import { AppError, ErrorCode } from '../../shared/utils/errors';
 import { logger } from '../../shared/utils/logger';
+import { TrackInfo } from '../../shared/ipc/types';
 import { app } from 'electron';
 import { join } from 'path';
-import { createWriteStream, promises as fs } from 'fs';
-import fetch, { Response } from 'node-fetch';
 import { Readable } from 'stream';
 
-export class DownloadService {
+export interface DownloadProgressEvent {
+  url: string;
+  bytesReceived: number;
+  totalBytes: number;
+  progress: number;
+  trackInfo?: TrackInfo;
+}
+
+export interface DownloadResultEvent {
+  url: string;
+  filePath: string;
+  size: number;
+  trackInfo?: TrackInfo;
+}
+
+export class DownloadService extends EventEmitter {
   private downloadPath: string;
   private activeDownloads: Map<string, AbortController>;
 
   constructor(downloadPath?: string) {
+    super();
     this.downloadPath = downloadPath || join(app.getPath('downloads'), 'Beatport');
     this.activeDownloads = new Map();
   }
 
-  async ensureDownloadDirectory(): Promise<void> {
+  private async ensureDownloadDirectory(): Promise<void> {
     try {
       await fs.mkdir(this.downloadPath, { recursive: true });
     } catch (error) {
       logger.error('Failed to create download directory:', error);
-      throw new DownloadError('Failed to create download directory', {
+      throw new AppError('Failed to create download directory', {
+        code: ErrorCode.FILE_SYSTEM,
         details: { path: this.downloadPath },
       });
     }
@@ -30,85 +49,87 @@ export class DownloadService {
   async downloadTrack(
     url: string,
     trackInfo: TrackInfo,
-    onProgress?: (progress: DownloadProgress) => void
-  ): Promise<DownloadResult> {
+    onProgress?: (progress: DownloadProgressEvent) => void
+  ): Promise<DownloadResultEvent> {
     await this.ensureDownloadDirectory();
 
+    const filePath = join(this.downloadPath, `${trackInfo.title}.mp3`);
     const abortController = new AbortController();
     this.activeDownloads.set(url, abortController);
 
     try {
       const response = await fetch(url, {
-        signal: abortController.signal as unknown as AbortSignal,
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
-        throw new DownloadError(`HTTP error! status: ${response.status}`);
+        throw new AppError(`HTTP error! status: ${response.status}`, {
+          code: ErrorCode.NETWORK,
+          details: {
+            status: response.status,
+            statusText: response.statusText,
+          },
+        });
       }
 
-      const contentLength = Number(response.headers.get('content-length')) || 0;
+      const totalBytes = Number(response.headers.get('content-length')) || 0;
       let downloaded = 0;
 
-      const fileName = `${trackInfo.artist} - ${trackInfo.title}.mp3`.replace(
-        /[/\\?%*:|"<>]/g,
-        '-'
-      );
-      const filePath = join(this.downloadPath, fileName);
       const fileStream = createWriteStream(filePath);
 
-      const reportProgress = (chunk: Buffer) => {
-        downloaded += chunk.length;
-        const progress = contentLength ? (downloaded / contentLength) * 100 : 0;
-        onProgress?.({
-          url,
-          progress: Math.min(progress, 100),
-          trackInfo,
+      if (!response.body) {
+        throw new AppError('No response body', {
+          code: ErrorCode.NETWORK,
         });
-      };
+      }
 
-      await new Promise<void>((resolve, reject) => {
-        if (response.body instanceof Readable) {
-          response.body.on('data', chunk => {
-            fileStream.write(chunk);
-            reportProgress(chunk);
-          });
+      if (response.body instanceof Readable) {
+        response.body.on('data', (chunk: Buffer) => {
+          downloaded += chunk.length;
+          const progress = totalBytes ? (downloaded / totalBytes) * 100 : 0;
 
-          response.body.on('end', () => {
-            fileStream.end();
-            resolve();
-          });
+          const progressEvent: DownloadProgressEvent = {
+            url,
+            bytesReceived: downloaded,
+            totalBytes,
+            progress: Math.min(progress, 100),
+            trackInfo,
+          };
 
-          response.body.on('error', error => {
-            fileStream.destroy();
-            reject(error);
-          });
+          this.emit('progress', progressEvent);
+          if (onProgress) onProgress(progressEvent);
+        });
 
-          fileStream.on('error', error => {
-            response.body?.destroy();
-            reject(error);
-          });
-        } else {
-          reject(new Error('Response body is not a readable stream'));
-        }
-      });
+        await pipeline(response.body, fileStream);
+      } else {
+        throw new AppError('Response body is not a readable stream', {
+          code: ErrorCode.NETWORK,
+        });
+      }
 
       this.activeDownloads.delete(url);
-      return {
+
+      const result: DownloadResultEvent = {
         url,
-        success: true,
         filePath,
+        size: downloaded,
         trackInfo,
       };
+
+      this.emit('complete', result);
+      return result;
     } catch (error) {
       this.activeDownloads.delete(url);
       if (error instanceof Error) {
         logger.error('Download failed:', error);
-        return {
-          url,
-          success: false,
-          error: error.message,
-          trackInfo,
-        };
+        throw new AppError(error.message, {
+          code: ErrorCode.DOWNLOAD,
+          details: {
+            url,
+            filePath,
+            trackInfo,
+          },
+        });
       }
       throw error;
     }
@@ -119,7 +140,7 @@ export class DownloadService {
     if (controller) {
       controller.abort();
       this.activeDownloads.delete(url);
-      logger.info(`Download cancelled for URL: ${url}`);
+      this.emit('cancelled', { url });
     }
   }
 
@@ -129,5 +150,90 @@ export class DownloadService {
 
   setDownloadPath(path: string): void {
     this.downloadPath = path;
+  }
+
+  getDownloadPath(): string {
+    return this.downloadPath;
+  }
+
+  async downloadFile(url: string, filePath: string): Promise<DownloadResultEvent> {
+    try {
+      const abortController = new AbortController();
+      this.activeDownloads.set(url, abortController);
+
+      const response = await fetch(url, {
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new AppError(`HTTP error! status: ${response.status}`, {
+          code: ErrorCode.NETWORK,
+          details: {
+            status: response.status,
+            statusText: response.statusText,
+          },
+        });
+      }
+
+      const totalBytes = Number(response.headers.get('content-length')) || 0;
+      let bytesReceived = 0;
+
+      const fileStream = createWriteStream(filePath);
+
+      if (!response.body) {
+        throw new AppError('No response body', {
+          code: ErrorCode.NETWORK,
+        });
+      }
+
+      if (response.body instanceof Readable) {
+        response.body.on('data', (chunk: Buffer) => {
+          bytesReceived += chunk.length;
+          const progress = totalBytes ? (bytesReceived / totalBytes) * 100 : 0;
+
+          this.emit('progress', {
+            url,
+            bytesReceived,
+            totalBytes,
+            progress,
+          } as DownloadProgressEvent);
+        });
+
+        await pipeline(response.body, fileStream);
+      } else {
+        throw new AppError('Response body is not a readable stream', {
+          code: ErrorCode.NETWORK,
+        });
+      }
+
+      this.activeDownloads.delete(url);
+
+      const result: DownloadResultEvent = {
+        url,
+        filePath,
+        size: bytesReceived,
+      };
+
+      this.emit('complete', result);
+      return result;
+    } catch (error) {
+      this.activeDownloads.delete(url);
+
+      if (error instanceof Error) {
+        throw new AppError(error.message, {
+          code: ErrorCode.DOWNLOAD,
+          details: {
+            url,
+            filePath,
+          },
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  isDownloading(url: string): boolean {
+    return this.activeDownloads.has(url);
   }
 }

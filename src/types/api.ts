@@ -18,3 +18,6 @@ declare global {
   var electron: ElectronAPI | undefined;
   var beatport: BeatportAPI | undefined;
 }
+
+const API_BASE_URL = process.env.API_BASE_URL || 'https://api.beatport.com';
+const API_VERSION = 'v1';

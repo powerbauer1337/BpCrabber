@@ -1,5 +1,5 @@
 import path from 'path';
-import { logger } from '../utils/logger';
+import { logger } from '@electron/utils/logger';
 import { session } from 'electron';
 
 interface WebRequestDetails {

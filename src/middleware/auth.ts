@@ -1,58 +1,38 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AppError, ErrorCode } from '../utils/errors';
-import { getConfig } from '../config/config';
-import { RequestWithUser } from './index';
+import { AppError, ErrorCode } from '../shared/utils/errors';
 
-interface JwtPayload {
-  sub: string;
-  email: string;
-  roles?: string[];
-  iat?: number;
-  exp?: number;
+export interface RequestWithUser extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    roles?: string[];
+  };
 }
 
-/**
- * Middleware to authenticate JWT tokens
- */
-export const authenticateToken = async (
+export const authenticate = async (
   req: RequestWithUser,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
       throw new AppError('Authentication required', {
         code: ErrorCode.AUTHENTICATION,
-        statusCode: 401,
       });
     }
 
-    const { jwtSecret } = getConfig('auth');
-    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
-
-    // Add user info to request
-    req.user = {
-      id: decoded.sub,
-      email: decoded.email,
-      roles: decoded.roles,
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as {
+      userId: string;
+      email: string;
+      roles?: string[];
     };
 
+    req.user = decoded;
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(
-        new AppError('Invalid or expired token', {
-          code: ErrorCode.AUTHENTICATION,
-          statusCode: 401,
-          metadata: { tokenError: error.message },
-        })
-      );
-      return;
-    }
     next(error);
   }
 };
@@ -60,35 +40,31 @@ export const authenticateToken = async (
 /**
  * Middleware to check user roles
  */
-export const requireRoles = (allowedRoles: string[]) => {
-  return (req: RequestWithUser, _res: Response, next: NextFunction) => {
-    if (!req.user) {
-      next(
-        new AppError('Authentication required', {
+export const requireRoles = (roles: string[]) => {
+  return async (req: RequestWithUser, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        throw new AppError('Authentication required', {
           code: ErrorCode.AUTHENTICATION,
-          statusCode: 401,
-        })
-      );
-      return;
-    }
+        });
+      }
 
-    const userRoles = req.user.roles || [];
-    const hasRequiredRole = allowedRoles.some(role => userRoles.includes(role));
+      const userRoles = req.user.roles || [];
+      const hasRequiredRole = roles.some(role => userRoles.includes(role));
 
-    if (!hasRequiredRole) {
-      next(
-        new AppError('Insufficient permissions', {
-          code: ErrorCode.AUTHENTICATION,
-          statusCode: 403,
-          metadata: {
-            requiredRoles: allowedRoles,
-            userRoles,
+      if (!hasRequiredRole) {
+        throw new AppError('Insufficient permissions', {
+          code: ErrorCode.AUTHORIZATION,
+          details: {
+            requiredRoles: roles,
+            userRoles: userRoles,
           },
-        })
-      );
-      return;
-    }
+        });
+      }
 
-    next();
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
 };

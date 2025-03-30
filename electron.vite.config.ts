@@ -1,6 +1,7 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { builtinModules } from 'module';
 
 const sharedAliases = {
   '@': resolve(__dirname, 'src'),
@@ -15,6 +16,17 @@ const sharedAliases = {
   '@services': resolve(__dirname, 'src/services'),
 };
 
+// Node.js built-in modules and external dependencies to exclude
+const external = [
+  'electron',
+  'electron-updater',
+  'electron-store',
+  'electron-log',
+  'electron-serve',
+  ...builtinModules,
+  ...builtinModules.map(m => `node:${m}`),
+];
+
 export default defineConfig({
   main: {
     build: {
@@ -23,13 +35,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/main.ts'),
         },
-        external: [
-          'electron',
-          'electron-updater',
-          'electron-store',
-          'electron-log',
-          'electron-serve',
-        ],
+        external,
       },
     },
     resolve: {
@@ -44,7 +50,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/preload.ts'),
         },
-        external: ['electron'],
+        external,
         output: {
           format: 'cjs',
           entryFileNames: '[name].js',
@@ -69,6 +75,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'index.html'),
         },
+        external,
       },
     },
     plugins: [react()],
@@ -76,7 +83,7 @@ export default defineConfig({
       alias: sharedAliases,
     },
     optimizeDeps: {
-      exclude: ['electron'],
+      exclude: external,
     },
   },
 });

@@ -1,4 +1,4 @@
-import { logger } from './logger';
+import { logger } from '@electron/utils/logger';
 
 export enum ErrorCode {
   VALIDATION = 'VALIDATION_ERROR',

@@ -4,6 +4,18 @@ import {
   validateFilePath,
   sanitizeFilePath,
 } from '../security';
+import { session } from 'electron';
+
+jest.mock('electron', () => ({
+  session: {
+    defaultSession: {
+      webRequest: {
+        onHeadersReceived: jest.fn(),
+        onBeforeRequest: jest.fn(),
+      },
+    },
+  },
+}));
 
 describe('securityConfig', () => {
   it('should have correct CSP configuration', () => {
@@ -51,27 +63,18 @@ describe('securityConfig', () => {
 });
 
 describe('setupSecurityPolicies', () => {
-  const mockSession = {
-    defaultSession: {
-      webRequest: {
-        onHeadersReceived: jest.fn(),
-        onBeforeRequest: jest.fn(),
-      },
-    },
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('should set up CSP headers', () => {
     setupSecurityPolicies();
-    expect(mockSession.defaultSession.webRequest.onHeadersReceived).toHaveBeenCalled();
+    expect(session.defaultSession.webRequest.onHeadersReceived).toHaveBeenCalled();
   });
 
   it('should set up navigation validation', () => {
     setupSecurityPolicies();
-    expect(mockSession.defaultSession.webRequest.onBeforeRequest).toHaveBeenCalled();
+    expect(session.defaultSession.webRequest.onBeforeRequest).toHaveBeenCalled();
   });
 });
 
@@ -97,7 +100,8 @@ describe('validateFilePath', () => {
 describe('sanitizeFilePath', () => {
   it('should remove parent directory references', () => {
     expect(sanitizeFilePath('../test.mp3')).toBe('test.mp3');
-    expect(sanitizeFilePath('folder/../test.mp3')).toBe('folder/test.mp3');
+    expect(sanitizeFilePath('folder/../test.mp3')).toBe('test.mp3');
+    expect(sanitizeFilePath('folder1/folder2/../test.mp3')).toBe('folder1/test.mp3');
   });
 
   it('should normalize path separators', () => {
@@ -106,8 +110,7 @@ describe('sanitizeFilePath', () => {
   });
 
   it('should handle multiple path segments', () => {
-    expect(sanitizeFilePath('folder1/folder2/../folder3/test.mp3')).toBe(
-      'folder1/folder3/test.mp3'
-    );
+    expect(sanitizeFilePath('folder1/folder2/test.mp3')).toBe('folder1/folder2/test.mp3');
+    expect(sanitizeFilePath('./folder1/./folder2/test.mp3')).toBe('folder1/folder2/test.mp3');
   });
 });

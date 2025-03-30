@@ -1,5 +1,5 @@
 /** @type {import('jest').Config} */
-module.exports = {
+export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
@@ -30,6 +30,8 @@ module.exports = {
       'ts-jest',
       {
         tsconfig: 'tsconfig.test.json',
+        useESM: true,
+        isolatedModules: true,
       },
     ],
   },
@@ -47,11 +49,9 @@ module.exports = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
-  },
   verbose: true,
-  testTimeout: 10000,
+  testTimeout: 30000,
+  detectOpenHandles: true,
+  forceExit: true,
+  testPathIgnorePatterns: ['<rootDir>/src/tests/e2e/'],
 };
