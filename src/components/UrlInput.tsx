@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
-import { Box, TextField, Typography, Alert } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
-import type { LoadingButtonProps } from '@mui/lab';
+import {
+  Box,
+  TextField,
+  IconButton,
+  CircularProgress,
+  Tooltip,
+  Alert,
+  Collapse,
+  InputAdornment,
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  ContentPaste as PasteIcon,
+} from '@mui/icons-material';
 
 interface Track {
   id: string;
@@ -14,91 +26,143 @@ interface UrlInputProps {
   onTrackDetected: (track: Track) => void;
 }
 
-export const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
+const UrlInput: React.FC<UrlInputProps> = ({ onTrackDetected }) => {
   const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isValid, setIsValid] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!url.includes('beatport.com')) {
-      setError('Please enter a valid Beatport URL');
+  const validateUrl = (input: string) => {
+    try {
+      const urlObj = new URL(input);
+      return urlObj.hostname === 'www.beatport.com' && urlObj.pathname.includes('/track/');
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target.value;
+    setUrl(input);
+    setIsValid(validateUrl(input));
+    setError(null);
+  };
+
+  const handleClear = () => {
+    setUrl('');
+    setError(null);
+    setIsValid(false);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setUrl(text);
+      setIsValid(validateUrl(text));
+      setError(null);
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
+      setError('Failed to paste from clipboard');
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!isValid) {
+      setError('Please enter a valid Beatport track URL');
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
+      // Send message to main process and wait for response
+      window.electron.ipcRenderer.send('beatport:get-track-info', url);
 
-      // Extract track ID from URL
-      const match = url.match(/\/track\/[^\/]+\/(\d+)/);
-      if (!match) {
-        setError('Invalid Beatport track URL');
-        return;
-      }
+      const handleTrackInfo = (trackInfo: { title: string; artist: string } | null) => {
+        if (!trackInfo) {
+          throw new Error('Failed to fetch track information');
+        }
 
-      const trackId = match[1];
+        onTrackDetected({
+          id: new URL(url).pathname.split('/').pop() || Date.now().toString(),
+          title: trackInfo.title,
+          artist: trackInfo.artist,
+          url,
+        });
 
-      // Get track info from Beatport
-      const trackInfo = await window.beatport.getTrackInfo(url);
+        setUrl('');
+        setIsValid(false);
+        setIsLoading(false);
+      };
 
-      // Add track to the list
-      onTrackDetected({
-        id: trackId,
-        title: trackInfo.title,
-        artist: trackInfo.artist,
-        url: url,
-      });
-
-      setUrl('');
+      // Listen for one-time response
+      window.electron.ipcRenderer.once('beatport:track-info-result', handleTrackInfo);
     } catch (err) {
-      setError('Failed to get track information. Please try again.');
-      console.error('Track detection error:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching track info:', err);
+      setError('Failed to fetch track information. Please check the URL and try again.');
+      setIsLoading(false);
     }
   };
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Add Track
-      </Typography>
+    <Box component="form" onSubmit={handleSubmit}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Enter Beatport track URL"
+        value={url}
+        onChange={handleUrlChange}
+        error={!!error}
+        disabled={isLoading}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon color="action" />
+            </InputAdornment>
+          ),
+          endAdornment: (
+            <InputAdornment position="end">
+              {url && (
+                <Tooltip title="Clear">
+                  <IconButton edge="end" onClick={handleClear} disabled={isLoading} size="small">
+                    <ClearIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title="Paste from clipboard">
+                <IconButton edge="end" onClick={handlePaste} disabled={isLoading} size="small">
+                  <PasteIcon />
+                </IconButton>
+              </Tooltip>
+              {isLoading && <CircularProgress size={20} sx={{ ml: 1 }} />}
+            </InputAdornment>
+          ),
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': {
+              borderColor: isValid ? 'success.main' : 'inherit',
+            },
+            '&:hover fieldset': {
+              borderColor: isValid ? 'success.main' : 'inherit',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: isValid ? 'success.main' : 'primary.main',
+            },
+          },
+        }}
+      />
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      <Collapse in={!!error}>
+        <Alert severity="error" sx={{ mt: 1 }}>
           {error}
         </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={e => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-      >
-        <TextField
-          fullWidth
-          label="Beatport Track URL"
-          placeholder="https://www.beatport.com/track/..."
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          margin="normal"
-          required
-        />
-
-        <LoadingButton
-          loading={loading}
-          variant="contained"
-          color="primary"
-          onClick={handleSubmit}
-          sx={{ mt: 2 }}
-          fullWidth
-          type="submit"
-        >
-          Add Track
-        </LoadingButton>
-      </Box>
+      </Collapse>
     </Box>
   );
 };
+
+export default UrlInput;

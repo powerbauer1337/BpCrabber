@@ -5,165 +5,188 @@ import {
   List,
   ListItem,
   ListItemText,
-  IconButton,
   LinearProgress,
-  Button,
-  Paper,
-  Alert,
+  IconButton,
+  Chip,
+  Divider,
+  Stack,
+  Tooltip,
 } from '@mui/material';
-import { Delete as DeleteIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { useDownloadStore } from '../stores/downloadStore';
-import type { DownloadItem } from '../stores/downloadStore';
+import {
+  Pause as PauseIcon,
+  PlayArrow as PlayArrowIcon,
+  Clear as ClearIcon,
+} from '@mui/icons-material';
 
-const getStatusColor = (status: DownloadItem['status']) => {
-  switch (status) {
-    case 'completed':
-      return 'success.main';
-    case 'error':
-      return 'error.main';
-    case 'downloading':
-    case 'tagging':
-      return 'primary.main';
-    default:
-      return 'text.primary';
-  }
-};
-
-interface DownloadStatus {
+interface QueueItem {
+  id: string;
+  title: string;
+  artist: string;
   progress: number;
-  status: 'idle' | 'downloading';
+  status: 'queued' | 'downloading' | 'completed' | 'error' | 'paused';
+  error?: string;
 }
 
-export const DownloadQueue: React.FC = () => {
-  const { queue, removeFromQueue, clearCompleted } = useDownloadStore();
-  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>({
-    progress: 0,
-    status: 'idle',
-  });
-  const [error, setError] = useState<string | null>(null);
+interface DownloadQueueProps {
+  onPause?: (id: string) => void;
+  onResume?: (id: string) => void;
+  onRemove?: (id: string) => void;
+  onClearCompleted?: () => void;
+}
+
+const DownloadQueue: React.FC<DownloadQueueProps> = ({
+  onPause,
+  onResume,
+  onRemove,
+  onClearCompleted,
+}) => {
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [totalProgress, setTotalProgress] = useState(0);
 
   useEffect(() => {
-    const checkProgress = async () => {
-      try {
-        const status = await window.beatport.getDownloadProgress();
-        setDownloadStatus(status as DownloadStatus);
-      } catch (err) {
-        console.error('Error checking progress:', err);
-        setError('Failed to get download progress');
+    // Subscribe to queue updates from main process
+    const handleQueueUpdate = (newQueue: QueueItem[]) => {
+      setQueue(newQueue);
+
+      // Calculate total progress
+      if (newQueue.length > 0) {
+        const total = newQueue.reduce((acc, item) => acc + item.progress, 0) / newQueue.length;
+        setTotalProgress(total);
+      } else {
+        setTotalProgress(0);
       }
     };
 
-    // Check progress every second while downloading
-    const interval = setInterval(() => {
-      if (downloadStatus.status === 'downloading') {
-        checkProgress();
-      }
-    }, 1000);
+    window.electron.ipcRenderer.on('queue:update', handleQueueUpdate);
 
-    return () => clearInterval(interval);
-  }, [downloadStatus.status]);
+    return () => {
+      window.electron.ipcRenderer.removeListener('queue:update', handleQueueUpdate);
+    };
+  }, []);
 
-  const handleCancel = async () => {
-    try {
-      await window.beatport.cancelDownload();
-      setDownloadStatus({ progress: 0, status: 'idle' });
-    } catch (err) {
-      console.error('Error canceling download:', err);
-      setError('Failed to cancel download');
+  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'info' | 'default' => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'error':
+        return 'error';
+      case 'paused':
+        return 'warning';
+      case 'downloading':
+        return 'info';
+      default:
+        return 'default';
     }
   };
 
-  if (downloadStatus.status === 'idle' && !error) {
-    return (
-      <Box>
-        <Typography variant="h6" gutterBottom>
-          Download Queue
-        </Typography>
-        <Typography color="textSecondary">No active downloads</Typography>
-      </Box>
-    );
-  }
+  const completedItems = queue.filter(item => item.status === 'completed').length;
+  const hasCompletedItems = completedItems > 0;
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">Download Queue</Typography>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={clearCompleted}
-          disabled={!queue.some(item => ['completed', 'error'].includes(item.status))}
-        >
-          Clear Completed
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {downloadStatus.status === 'downloading' && (
-        <Paper sx={{ p: 2, mt: 2 }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Box flexGrow={1}>
-              <Typography variant="subtitle1" gutterBottom>
-                Downloading...
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={downloadStatus.progress}
-                sx={{ height: 8, borderRadius: 1 }}
-              />
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                {downloadStatus.progress}% Complete
-              </Typography>
-            </Box>
-            <IconButton onClick={handleCancel} color="error">
-              <CancelIcon />
+        {hasCompletedItems && (
+          <Tooltip title="Clear completed">
+            <IconButton size="small" onClick={onClearCompleted}>
+              <ClearIcon />
             </IconButton>
-          </Box>
-        </Paper>
-      )}
+          </Tooltip>
+        )}
+      </Stack>
 
-      <List>
-        {queue.map(item => (
-          <ListItem
-            key={item.id}
-            secondaryAction={
-              <IconButton edge="end" onClick={() => removeFromQueue(item.id)}>
-                <DeleteIcon />
-              </IconButton>
-            }
-          >
-            <ListItemText
-              primary={
-                <Typography color={getStatusColor(item.status)}>
-                  {item.title} - {item.artist}
-                </Typography>
-              }
-              secondary={
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                    {item.error && ` - ${item.error}`}
-                  </Typography>
-                  {['downloading', 'tagging'].includes(item.status) && (
-                    <LinearProgress variant="determinate" value={item.progress} sx={{ mt: 1 }} />
-                  )}
-                </Box>
-              }
+      {queue.length > 0 ? (
+        <>
+          <Box mb={2}>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              Overall Progress: {Math.round(totalProgress)}%
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={totalProgress}
+              sx={{ height: 8, borderRadius: 4 }}
             />
-          </ListItem>
-        ))}
-      </List>
+          </Box>
 
-      {queue.length === 0 && (
-        <Typography color="text.secondary" textAlign="center">
+          <List>
+            {queue.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && <Divider />}
+                <ListItem
+                  sx={{
+                    opacity: item.status === 'completed' ? 0.7 : 1,
+                    '&:hover': { bgcolor: 'action.hover' },
+                  }}
+                >
+                  <ListItemText
+                    primary={
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="body1" noWrap>
+                          {item.title}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={item.status}
+                          color={getStatusColor(item.status)}
+                        />
+                      </Box>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="textSecondary" noWrap>
+                          {item.artist}
+                        </Typography>
+                        {item.status === 'downloading' && (
+                          <LinearProgress
+                            variant="determinate"
+                            value={item.progress}
+                            sx={{ mt: 1, height: 4, borderRadius: 2 }}
+                          />
+                        )}
+                        {item.error && (
+                          <Typography variant="caption" color="error" noWrap>
+                            {item.error}
+                          </Typography>
+                        )}
+                      </Box>
+                    }
+                  />
+
+                  <Stack direction="row" spacing={1}>
+                    {item.status === 'downloading' && onPause && (
+                      <Tooltip title="Pause">
+                        <IconButton size="small" onClick={() => onPause(item.id)}>
+                          <PauseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {item.status === 'paused' && onResume && (
+                      <Tooltip title="Resume">
+                        <IconButton size="small" onClick={() => onResume(item.id)}>
+                          <PlayArrowIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {onRemove && item.status !== 'downloading' && (
+                      <Tooltip title="Remove">
+                        <IconButton size="small" onClick={() => onRemove(item.id)}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+                </ListItem>
+              </React.Fragment>
+            ))}
+          </List>
+        </>
+      ) : (
+        <Typography color="textSecondary" align="center" py={4}>
           No downloads in queue
         </Typography>
       )}
     </Box>
   );
 };
+
+export default DownloadQueue;

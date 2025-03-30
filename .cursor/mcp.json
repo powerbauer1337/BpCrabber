@@ -1,188 +1,318 @@
 {
+  "version": "1.0.0",
   "mcpServers": {
-    "Code Assistant": {
-      "description": "Code exploration server",
-      "type": "stdio",
+    "core": {
+      "description": "Core MCP functionality and service coordination",
+      "type": "shared-process",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "core"],
+      "env": {
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "high"
+      }
+    },
+    "code-assistant": {
+      "description": "Intelligent code analysis and assistance",
+      "type": "shared-process",
       "command": "npx",
       "args": ["cursor-mcp-installer-free@latest", "code-assistant"],
       "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "MAX_MEMORY": "512mb",
+        "ANALYSIS_TIMEOUT": "30000"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "high"
       }
     },
-    "File Operations": {
-      "description": "File management server",
-      "type": "stdio",
+    "file-operations": {
+      "description": "File system operations and monitoring",
+      "type": "shared-process",
       "command": "npx",
       "args": ["cursor-mcp-installer-free@latest", "files"],
       "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "WATCH_IGNORE": "node_modules,dist,build,.git",
+        "MAX_FILE_SIZE": "100mb"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "medium"
       }
     },
-    "Shell": {
-      "description": "Shell command server",
-      "type": "stdio",
+    "shell-server": {
+      "description": "Terminal and command execution",
+      "type": "shared-process",
       "command": "npx",
       "args": ["cursor-mcp-installer-free@latest", "shell"],
       "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "Playwright": {
-      "description": "Playwright automation and testing server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["cursor-mcp-installer-free@latest", "playwright"],
-      "env": {
-        "LOG_LEVEL": "debug",
         "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "PLAYWRIGHT_BROWSERS_PATH": "${WORKSPACE_ROOT}/node_modules/playwright-core/.local-browsers",
-        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "0",
-        "PLAYWRIGHT_SKIP_VALIDATION": "0"
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "ALLOWED_COMMANDS": "git,npm,node,npx,yarn,pnpm,python,pip,powershell,cmd",
+        "MAX_EXECUTION_TIME": "300000"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "medium"
       }
     },
-    "Code Runner": {
-      "description": "Code execution and sandbox server",
-      "type": "stdio",
+    "language-server": {
+      "description": "Language server protocol support",
+      "type": "shared-process",
       "command": "npx",
-      "args": ["mcp-server-code-runner"],
+      "args": ["cursor-mcp-installer-free@latest", "lsp"],
       "env": {
-        "LOG_LEVEL": "debug",
         "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "MAX_EXECUTION_TIME": "30000",
-        "ALLOWED_LANGUAGES": "javascript,typescript,python,shell"
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "LSP_TIMEOUT": "30000",
+        "SUPPORTED_LANGUAGES": "javascript,typescript,python,json,markdown"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "high"
       }
     },
-    "Google Drive": {
-      "description": "Google Drive integration server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-gdrive"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "GDRIVE_CREDENTIALS_PATH": "${WORKSPACE_ROOT}/.config/gdrive-credentials.json",
-        "GDRIVE_TOKEN_PATH": "${WORKSPACE_ROOT}/.config/gdrive-token.json"
-      }
-    },
-    "Fetch": {
-      "description": "HTTP request and API integration server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["cursor-mcp-installer-free@latest", "fetch"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "MAX_REQUEST_SIZE": "10MB",
-        "REQUEST_TIMEOUT": "30000"
-      }
-    },
-    "Desktop Commander": {
-      "description": "Desktop automation and control server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@wonderwhy-er/desktop-commander"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "ALLOW_SYSTEM_COMMANDS": "true",
-        "MAX_EXECUTION_TIME": "30000"
-      }
-    },
-    "DeepSeek": {
-      "description": "DeepSeek AI integration server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["deepseek-mcp-server"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "Sequential Thinking": {
-      "description": "Sequential thinking and problem-solving server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["mcp-sequentialthinking-tools"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "WSL Exec": {
-      "description": "Windows Subsystem for Linux execution server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["mcp-wsl-exec"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "Vibe Check": {
-      "description": "AI workflow sanity check and pattern interrupt server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["vibe-check-mcp-server"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "Client Configuration": {
-      "description": "MCP client configuration management server",
-      "type": "stdio",
-      "command": "npx",
-      "args": ["mcp-client-configuration-server"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}"
-      }
-    },
-    "Git Tools": {
-      "description": "Git and GitHub integration server",
-      "type": "stdio",
+    "git-server": {
+      "description": "Git operations and version control",
+      "type": "shared-process",
       "command": "npx",
       "args": ["cursor-mcp-installer-free@latest", "git"],
       "env": {
-        "LOG_LEVEL": "debug",
         "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "GIT_TIMEOUT": "30000"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "medium"
+      }
+    },
+    "debug-server": {
+      "description": "Debugging and profiling support",
+      "type": "shared-process",
+      "command": "npx",
+      "args": ["cursor-mcp-installer-free@latest", "debug"],
+      "env": {
+        "WORKSPACE_ROOT": "${WORKSPACE_ROOT}",
+        "NODE_ENV": "${NODE_ENV}",
+        "LOG_LEVEL": "info",
+        "NO_SPAWN_CMD": "true",
+        "DETACHED": "true",
+        "DEBUG_PORT": "9229",
+        "PROFILE_INTERVAL": "1000"
+      },
+      "options": {
+        "autoRestart": true,
+        "maxRestarts": 3,
+        "restartDelay": 1000,
+        "priority": "low"
       }
     }
   },
   "settings": {
-    "logLevel": "debug",
-    "fallbackMode": "auto",
-    "maxRetries": 3,
-    "timeout": 30000,
-    "retryDelay": 1000,
-    "validateConfig": true,
-    "validateEnv": true,
-    "workspaceRoot": "${WORKSPACE_ROOT}",
-    "security": {
-      "tokenValidation": true,
-      "commandWhitelist": true,
-      "pathValidation": true,
-      "maxFileSize": "100MB",
-      "maxExecutionTime": 30000,
-      "allowedOrigins": ["http://localhost:3000"]
+    "core": {
+      "logLevel": "info",
+      "fallbackMode": "graceful",
+      "maxRetries": 3,
+      "timeout": 30000,
+      "workspaceRoot": "${WORKSPACE_ROOT}",
+      "startupOrder": [
+        "core",
+        "language-server",
+        "code-assistant",
+        "file-operations",
+        "git-server",
+        "shell-server",
+        "debug-server"
+      ]
     },
     "performance": {
-      "parallelInitialization": false,
-      "connectionPooling": false,
-      "caching": true,
-      "maxConcurrentServers": 3,
-      "cacheTTL": 3600
+      "maxConcurrentOperations": 4,
+      "memoryLimit": "1024mb",
+      "gcInterval": 300000,
+      "optimization": {
+        "caching": true,
+        "compression": true,
+        "lazyLoading": true,
+        "preloading": {
+          "enabled": true,
+          "modules": ["core", "language-server"]
+        },
+        "resourceManagement": {
+          "enabled": true,
+          "idleTimeout": 300000,
+          "maxIdleInstances": 2
+        }
+      }
+    },
+    "security": {
+      "allowedCommands": [
+        "git",
+        "npm",
+        "node",
+        "npx",
+        "yarn",
+        "pnpm",
+        "python",
+        "pip",
+        "powershell",
+        "cmd"
+      ],
+      "timeouts": {
+        "operation": 30000,
+        "idle": 300000,
+        "shutdown": 5000
+      },
+      "restrictions": {
+        "allowNetworkAccess": true,
+        "allowFileSystemAccess": true,
+        "maxFileSize": "100mb",
+        "allowedPaths": ["${WORKSPACE_ROOT}"],
+        "blockedPaths": ["${WORKSPACE_ROOT}/node_modules", "${WORKSPACE_ROOT}/.git"]
+      }
+    },
+    "logging": {
+      "level": "info",
+      "format": "json",
+      "outputs": [
+        {
+          "type": "file",
+          "filename": "${WORKSPACE_ROOT}/logs/mcp.log",
+          "maxSize": "20m",
+          "maxFiles": 5,
+          "compress": true,
+          "format": "detailed"
+        },
+        {
+          "type": "console",
+          "format": "pretty",
+          "colors": true,
+          "timestamp": true
+        }
+      ],
+      "categories": {
+        "performance": "info",
+        "security": "warn",
+        "system": "info",
+        "debug": "debug"
+      }
+    },
+    "errorHandling": {
+      "retryStrategy": {
+        "initialDelay": 1000,
+        "maxDelay": 10000,
+        "factor": 2,
+        "maxAttempts": 3,
+        "timeout": 30000
+      },
+      "fallback": {
+        "enabled": true,
+        "mode": "graceful",
+        "timeout": 5000
+      },
+      "recovery": {
+        "enabled": true,
+        "checkInterval": 5000,
+        "healthEndpoint": "/health",
+        "timeout": 3000,
+        "successThreshold": 2
+      },
+      "circuitBreaker": {
+        "enabled": true,
+        "threshold": 5,
+        "timeout": 60000
+      }
     },
     "monitoring": {
-      "healthChecks": true,
-      "resourceTracking": true,
-      "errorReporting": true,
-      "metricsCollection": true,
-      "logRetention": "7d"
+      "enabled": true,
+      "interval": 30000,
+      "metrics": [
+        "memory",
+        "cpu",
+        "errors",
+        "operations",
+        "latency",
+        "requests",
+        "activeConnections",
+        "queueSize"
+      ],
+      "alerts": {
+        "memoryThreshold": 85,
+        "errorThreshold": 5,
+        "cpuThreshold": 80,
+        "latencyThreshold": 1000,
+        "queueThreshold": 100
+      },
+      "reporting": {
+        "enabled": true,
+        "interval": 300000,
+        "format": "json",
+        "destination": "${WORKSPACE_ROOT}/logs/metrics"
+      },
+      "profiling": {
+        "enabled": true,
+        "interval": 3600000,
+        "heapSnapshots": true
+      }
+    },
+    "development": {
+      "enableDebugMode": true,
+      "hotReload": true,
+      "sourceMap": true,
+      "inspectPort": 9229,
+      "watchMode": {
+        "enabled": true,
+        "ignored": ["node_modules", "dist", "build", "*.log", ".git"],
+        "usePolling": false,
+        "interval": 1000
+      },
+      "testing": {
+        "enabled": true,
+        "watch": true,
+        "coverage": true
+      },
+      "documentation": {
+        "generate": true,
+        "format": "markdown",
+        "output": "${WORKSPACE_ROOT}/docs"
+      }
     }
   }
 }

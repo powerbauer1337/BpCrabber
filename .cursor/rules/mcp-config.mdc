@@ -1,6 +1,332 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+description: MCP Server Configuration Rules and Best Practices
+globs: ["**/*"]
+alwaysApply: true
 ---
- 
+
+# MCP Server Configuration Rules
+
+## Server Tools and Capabilities
+
+### Core Server
+- **Purpose**: Core MCP functionality and service coordination
+- **Priority**: High
+- **Capabilities**:
+  - Service coordination
+  - Process management
+  - Resource allocation
+  - System health monitoring
+  - Inter-service communication
+  - State management
+- **Memory Limit**: 256MB
+- **Startup Timeout**: 30s
+
+### Code Assistant Server
+- **Purpose**: Intelligent code analysis and assistance
+- **Priority**: High
+- **Capabilities**:
+  - Code completion
+  - Syntax analysis
+  - Semantic search
+  - Code refactoring
+  - Error detection
+  - Code generation
+  - Documentation generation
+- **Memory Limit**: 512MB
+- **Analysis Timeout**: 30s
+- **Cache Size**: 100MB
+
+### File Operations Server
+- **Purpose**: File system operations and monitoring
+- **Priority**: Medium
+- **Capabilities**:
+  - File watching
+  - File system operations
+  - Directory management
+  - File search
+  - File indexing
+  - Change detection
+  - File compression
+- **Ignored Paths**: node_modules, dist, build, .git, .cache, temp
+- **Max File Size**: 100MB
+- **Watch Interval**: 1000ms
+
+### Shell Server
+- **Purpose**: Terminal and command execution
+- **Priority**: Medium
+- **Capabilities**:
+  - Command execution
+  - Shell management
+  - Process control
+  - Output streaming
+  - Environment management
+  - Command history
+- **Allowed Commands**: git, npm, node, npx, yarn, pnpm, python, pip, powershell, cmd, docker, docker-compose
+- **Max Execution Time**: 300s
+- **Max Output Size**: 10MB
+
+### Language Server
+- **Purpose**: Language server protocol support
+- **Priority**: High
+- **Capabilities**:
+  - Language support
+  - Code intelligence
+  - Syntax highlighting
+  - Code formatting
+  - Symbol search
+  - Reference finding
+  - Type checking
+- **Supported Languages**: javascript, typescript, python, json, markdown, html, css, sql, shell
+- **LSP Timeout**: 30s
+- **Cache Size**: 200MB
+
+### Git Server
+- **Purpose**: Git operations and version control
+- **Priority**: Medium
+- **Capabilities**:
+  - Version control
+  - Repository management
+  - Branch operations
+  - Commit handling
+  - Conflict resolution
+  - History search
+  - Blame tracking
+- **Operation Timeout**: 30s
+- **Max History Size**: 1000 commits
+- **Cache Size**: 50MB
+
+### Debug Server
+- **Purpose**: Debugging and profiling support
+- **Priority**: Low
+- **Capabilities**:
+  - Debugging
+  - Profiling
+  - Performance monitoring
+  - Memory analysis
+  - Breakpoint management
+  - Variable inspection
+  - Call stack analysis
+- **Debug Port**: 9229
+- **Profile Interval**: 1s
+- **Max Profile Size**: 100MB
+
+### Test Server
+- **Purpose**: Test execution and coverage
+- **Priority**: Medium
+- **Capabilities**:
+  - Test running
+  - Coverage reporting
+  - Test discovery
+  - Test debugging
+  - Performance testing
+  - Test history
+- **Test Timeout**: 60s
+- **Max Coverage Size**: 50MB
+- **History Size**: 100 runs
+
+### Documentation Server
+- **Purpose**: Documentation generation and management
+- **Priority**: Low
+- **Capabilities**:
+  - API documentation
+  - Code documentation
+  - Markdown processing
+  - Documentation search
+  - Version tracking
+  - Preview generation
+- **Output Format**: Markdown, HTML
+- **Max File Size**: 10MB
+- **Cache Size**: 50MB
+
+### Database Server
+- **Purpose**: Database operations and management
+- **Priority**: Medium
+- **Capabilities**:
+  - Query execution
+  - Schema management
+  - Migration handling
+  - Data validation
+  - Backup/restore
+  - Connection pooling
+- **Query Timeout**: 30s
+- **Max Connections**: 10
+- **Pool Size**: 5
+
+### Search Server
+- **Purpose**: Code and content search
+- **Priority**: Medium
+- **Capabilities**:
+  - Full-text search
+  - Regex search
+  - Symbol search
+  - File search
+  - History search
+  - Search indexing
+- **Index Size**: 200MB
+- **Max Results**: 1000
+- **Update Interval**: 5m
+
+## Best Practices
+
+### Server Management
+1. Follow the startup order:
+   - core → language-server → code-assistant → file-operations → git-server → shell-server → debug-server → test-server → documentation-server → database-server → search-server
+
+2. Resource Management:
+   - Use lazy loading when possible
+   - Preload core and language server
+   - Limit idle instances to 2
+   - Set appropriate memory limits
+   - Implement resource quotas
+   - Use connection pooling
+
+3. Security Guidelines:
+   - Restrict file system access
+   - Block sensitive paths
+   - Limit command execution
+   - Set operation timeouts
+   - Implement rate limiting
+   - Use secure protocols
+
+### Error Handling
+1. Retry Strategy:
+   - Initial delay: 1s
+   - Max delay: 10s
+   - Factor: 2
+   - Max attempts: 3
+   - Jitter: true
+   - Timeout: 30s
+
+2. Circuit Breaker:
+   - Threshold: 5 failures
+   - Timeout: 60s
+   - Half-open timeout: 30s
+   - Reset timeout: 300s
+
+3. Health Checks:
+   - Interval: 5s
+   - Success threshold: 2
+   - Failure threshold: 3
+   - Timeout: 3s
+   - Grace period: 30s
+
+### Monitoring
+1. Metrics Collection:
+   - Memory usage
+   - CPU utilization
+   - Error rates
+   - Operation latency
+   - Queue size
+   - Active connections
+   - Cache hit rates
+   - Response times
+   - Resource usage
+
+2. Alert Thresholds:
+   - Memory: 85%
+   - CPU: 80%
+   - Errors: 5/minute
+   - Latency: 1000ms
+   - Queue: 100 items
+   - Cache miss: 20%
+   - Response time: 2000ms
+
+### Development Mode
+1. Features:
+   - Debug mode enabled
+   - Hot reload active
+   - Source maps generated
+   - Watch mode enabled
+   - Test coverage tracking
+   - Documentation generation
+   - Performance profiling
+   - Memory leak detection
+   - Network monitoring
+
+2. Watch Mode Settings:
+   - Polling disabled
+   - 1s interval
+   - Ignore patterns set
+   - Git directory excluded
+   - Use native watchers
+   - Debounce: 1000ms
+   - Max listeners: 100
+
+## Logging Configuration
+
+### File Logging
+- Location: ${WORKSPACE_ROOT}/logs/mcp.log
+- Max size: 20MB
+- Rotation: 5 files
+- Compression enabled
+- Detailed format
+- JSON structure
+- Error tracking
+- Performance metrics
+
+### Console Logging
+- Pretty format
+- Colored output
+- Timestamps included
+- Log levels
+- Source tracking
+- Stack traces
+- Memory usage
+
+### Log Categories
+- Performance: INFO
+- Security: WARN
+- System: INFO
+- Debug: DEBUG
+- Error: ERROR
+- Access: INFO
+- Audit: INFO
+
+## Performance Optimization
+
+### Resource Limits
+- Max concurrent operations: 4
+- Memory limit: 1024MB
+- GC interval: 300s
+- Idle timeout: 300s
+- Max file handles: 1000
+- Max connections: 100
+- Max processes: 10
+
+### Caching Strategy
+- Enable response caching
+- Use compression
+- Implement lazy loading
+- Preload critical modules
+- Cache invalidation
+- Memory management
+- Disk caching
+
+## Security Measures
+
+### Access Control
+- Network access controlled
+- File system access restricted
+- Command execution limited
+- Path restrictions enforced
+- User permissions
+- Role-based access
+- Audit logging
+
+### Timeouts
+- Operations: 30s
+- Idle connections: 300s
+- Shutdown grace: 5s
+- Request timeout: 10s
+- Connection timeout: 5s
+- Session timeout: 3600s
+
+## Documentation
+- Format: Markdown, HTML
+- Output: ${WORKSPACE_ROOT}/docs
+- Auto-generation enabled
+- Include API documentation
+- Track changes
+- Version control
+- Search enabled
+- Preview support

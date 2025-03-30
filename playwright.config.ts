@@ -1,36 +1,43 @@
-import { defineConfig, devices } from '@playwright/test';
+import { PlaywrightTestConfig } from '@playwright/test';
+import path from 'path';
 
-export default defineConfig({
-  testDir: './src/tests/e2e',
-  fullyParallel: true,
+const outputDir = path.join(process.cwd(), 'test-results');
+
+const config: PlaywrightTestConfig = {
+  testDir: './tests',
+  timeout: 60000,
+  expect: {
+    timeout: 10000,
+  },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list'],
+    ['json', { outputFile: 'test-results/test-results.json' }],
+  ],
   use: {
-    baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    actionTimeout: 15000,
+    trace: 'retain-on-failure',
     video: 'retain-on-failure',
+    screenshot: {
+      mode: 'only-on-failure',
+      fullPage: true,
+    },
   },
+  outputDir,
+  preserveOutput: process.env.CI ? 'failures-only' : 'always',
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      name: 'Electron',
+      testMatch: /.*\.spec\.ts/,
+      testDir: './tests',
+      snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
-});
+  globalSetup: require.resolve('./tests/global-setup.ts'),
+  globalTeardown: require.resolve('./tests/global-teardown.ts'),
+};
+
+export default config;

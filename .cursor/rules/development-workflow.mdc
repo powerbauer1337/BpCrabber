@@ -1,7 +1,7 @@
 ---
-description: Development workflow rules for the Beatport app
-globs: ["src/**/*.ts", "src/**/*.js"]
-alwaysApply: true
+description: 
+globs: 
+alwaysApply: false
 ---
 
 # Development Workflow Rules

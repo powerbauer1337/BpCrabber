@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, List, ListItem, ListItemText } from '@mui/material';
 
-export const LogViewer: React.FC = () => {
+const LogViewer: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
@@ -45,3 +45,5 @@ export const LogViewer: React.FC = () => {
     </Box>
   );
 };
+
+export default LogViewer;

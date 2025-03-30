@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
-import { Box, Container, Paper, ThemeProvider, CssBaseline, Snackbar, Alert } from '@mui/material';
+import React, { useState, Suspense } from 'react';
+import {
+  Box,
+  Container,
+  Paper,
+  ThemeProvider,
+  CssBaseline,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Grid,
+} from '@mui/material';
 import { LoginForm } from './components/LoginForm';
 import { DownloadQueue } from './components/DownloadQueue';
 import { UrlInput } from './components/UrlInput';
-import { LogViewer } from './components/LogViewer';
-import { UpdateNotification } from './components/UpdateNotification';
 import { TrackList } from './components/TrackList';
 import { theme } from './theme';
+
+// Lazy load less critical components
+const LogViewer = React.lazy(() => import('./components/LogViewer'));
+const UpdateNotification = React.lazy(() => import('./components/UpdateNotification'));
 
 interface Track {
   id: string;
   title: string;
   artist: string;
   url: string;
+  status?: 'queued' | 'downloading' | 'completed' | 'error';
+  progress?: number;
 }
 
 const App: React.FC = () => {
@@ -76,29 +90,40 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <UpdateNotification />
+      <Suspense fallback={<CircularProgress />}>
+        <UpdateNotification />
+      </Suspense>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" flexDirection="column" gap={3}>
-          <Paper sx={{ p: 3 }}>
-            <LoginForm />
-          </Paper>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, mb: 2 }}>
+              <LoginForm />
+            </Paper>
+          </Grid>
 
-          <Paper sx={{ p: 3 }}>
-            <UrlInput onTrackDetected={handleTrackDetected} />
-          </Paper>
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <UrlInput onTrackDetected={handleTrackDetected} />
+              <Box sx={{ mt: 3 }}>
+                <TrackList tracks={tracks} onDownload={handleDownloadTracks} />
+              </Box>
+            </Paper>
+          </Grid>
 
-          <Paper sx={{ p: 3 }}>
-            <TrackList tracks={tracks} onDownload={handleDownloadTracks} />
-          </Paper>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <DownloadQueue />
+            </Paper>
+          </Grid>
 
-          <Paper sx={{ p: 3, minHeight: '300px' }}>
-            <DownloadQueue />
-          </Paper>
-
-          <Paper sx={{ p: 3, minHeight: '200px' }}>
-            <LogViewer />
-          </Paper>
-        </Box>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, minHeight: '200px' }}>
+              <Suspense fallback={<CircularProgress />}>
+                <LogViewer />
+              </Suspense>
+            </Paper>
+          </Grid>
+        </Grid>
       </Container>
 
       <Snackbar
@@ -110,6 +135,7 @@ const App: React.FC = () => {
         <Alert
           onClose={handleCloseNotification}
           severity={notification?.severity || 'success'}
+          variant="filled"
           sx={{ width: '100%' }}
         >
           {notification?.message || ''}

@@ -1,113 +1,146 @@
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
-  Checkbox,
-  Button,
-  Stack,
-  Divider,
+  IconButton,
+  LinearProgress,
+  Typography,
+  Box,
+  Chip,
+  Tooltip,
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import {
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+  Pause as PauseIcon,
+  PlayArrow as PlayArrowIcon,
+} from '@mui/icons-material';
 
 interface Track {
   id: string;
   title: string;
   artist: string;
   url: string;
+  status?: 'queued' | 'downloading' | 'completed' | 'error';
+  progress?: number;
 }
 
 interface TrackListProps {
   tracks: Track[];
-  onDownload: (selectedTracks: Track[]) => Promise<void>;
+  onDownload: (tracks: Track[]) => void;
+  onDelete?: (track: Track) => void;
+  onPause?: (track: Track) => void;
+  onResume?: (track: Track) => void;
 }
 
-export const TrackList: React.FC<TrackListProps> = ({ tracks, onDownload }) => {
-  const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
-  const [isDownloading, setIsDownloading] = useState(false);
+const TrackList: React.FC<TrackListProps> = ({
+  tracks,
+  onDownload,
+  onDelete,
+  onPause,
+  onResume,
+}) => {
+  const [selected, setSelected] = useState<string[]>([]);
 
-  const handleToggleTrack = (trackId: string) => {
-    setSelectedTracks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(trackId)) {
-        newSet.delete(trackId);
-      } else {
-        newSet.add(trackId);
-      }
-      return newSet;
-    });
+  const handleDownloadSelected = () => {
+    const selectedTracks = tracks.filter(track => selected.includes(track.id));
+    onDownload(selectedTracks);
+    setSelected([]);
   };
 
-  const handleSelectAll = () => {
-    if (selectedTracks.size === tracks.length) {
-      setSelectedTracks(new Set());
-    } else {
-      setSelectedTracks(new Set(tracks.map(track => track.id)));
-    }
-  };
-
-  const handleDownload = async () => {
-    const tracksToDownload = tracks.filter(track => selectedTracks.has(track.id));
-    if (tracksToDownload.length === 0) return;
-
-    setIsDownloading(true);
-    try {
-      await onDownload(tracksToDownload);
-    } finally {
-      setIsDownloading(false);
-      setSelectedTracks(new Set());
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'error':
+        return 'error';
+      case 'downloading':
+        return 'info';
+      case 'queued':
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" component="h2">
-          Detected Tracks ({tracks.length})
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          <Button variant="outlined" onClick={handleSelectAll} disabled={tracks.length === 0}>
-            {selectedTracks.size === tracks.length ? 'Deselect All' : 'Select All'}
-          </Button>
-          <LoadingButton
-            variant="contained"
-            startIcon={<CloudDownloadIcon />}
-            onClick={handleDownload}
-            loading={isDownloading}
-            disabled={selectedTracks.size === 0}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">Tracks ({tracks.length})</Typography>
+        {selected.length > 0 && (
+          <Tooltip title="Download selected">
+            <IconButton onClick={handleDownloadSelected} color="primary">
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
+
+      <List>
+        {tracks.map(track => (
+          <ListItem
+            key={track.id}
+            divider
+            secondaryAction={
+              <Box display="flex" alignItems="center" gap={1}>
+                {track.status && (
+                  <Chip
+                    size="small"
+                    label={track.status}
+                    color={getStatusColor(track.status) as any}
+                  />
+                )}
+                {track.status === 'downloading' && (
+                  <IconButton edge="end" onClick={() => onPause?.(track)} size="small">
+                    <PauseIcon />
+                  </IconButton>
+                )}
+                {track.status === 'queued' && (
+                  <IconButton edge="end" onClick={() => onResume?.(track)} size="small">
+                    <PlayArrowIcon />
+                  </IconButton>
+                )}
+                {!track.status && (
+                  <IconButton edge="end" onClick={() => onDownload([track])} size="small">
+                    <DownloadIcon />
+                  </IconButton>
+                )}
+                {onDelete && (
+                  <IconButton edge="end" onClick={() => onDelete(track)} size="small">
+                    <DeleteIcon />
+                  </IconButton>
+                )}
+              </Box>
+            }
           >
-            Download Selected ({selectedTracks.size})
-          </LoadingButton>
-        </Stack>
-      </Stack>
-
-      <Divider />
-
-      {tracks.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 4 }} align="center">
-          No tracks detected. Enter a Beatport URL to get started.
-        </Typography>
-      ) : (
-        <List>
-          {tracks.map(track => (
-            <ListItem key={track.id} dense button onClick={() => handleToggleTrack(track.id)}>
-              <ListItemIcon>
-                <Checkbox
-                  edge="start"
-                  checked={selectedTracks.has(track.id)}
-                  tabIndex={-1}
-                  disableRipple
+            <ListItemText
+              primary={track.title}
+              secondary={track.artist}
+              sx={{
+                opacity: track.status === 'completed' ? 0.7 : 1,
+              }}
+            />
+            {track.progress !== undefined && track.status === 'downloading' && (
+              <Box sx={{ width: '100%', mr: 2 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={track.progress}
+                  sx={{ height: 8, borderRadius: 4 }}
                 />
-              </ListItemIcon>
-              <ListItemText primary={track.title} secondary={track.artist} />
-            </ListItem>
-          ))}
-        </List>
+              </Box>
+            )}
+          </ListItem>
+        ))}
+      </List>
+
+      {tracks.length === 0 && (
+        <Typography color="textSecondary" align="center" py={4}>
+          No tracks added yet. Add tracks using the URL input above.
+        </Typography>
       )}
     </Box>
   );
 };
+
+export default TrackList;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, AlertTitle, Button, Snackbar } from '@mui/material';
 
-export const UpdateNotification: React.FC = () => {
+const UpdateNotification: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [version, setVersion] = useState('');
   const [open, setOpen] = useState(false);
@@ -51,3 +51,5 @@ export const UpdateNotification: React.FC = () => {
     </Snackbar>
   );
 };
+
+export default UpdateNotification;
