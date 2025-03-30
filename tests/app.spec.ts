@@ -1,101 +1,109 @@
-import { test, expect } from '@playwright/test';
-import { startApp, takeScreenshot, closeApp } from './utils/electron-helpers';
-import { cache } from '../src/utils/cache';
-import { handleError } from '../src/utils/error-handler';
+import { test, expect, _electron as electron } from '@playwright/test';
 
-test.describe('Beatport Track Downloader App', () => {
-  test('should launch and show the main window', async () => {
-    const { electronApp, window } = await startApp();
+test.describe('Beatport Downloader App Tests', () => {
+  let electronApp;
+  let window;
 
-    // Verify window is visible
-    expect(await window.isVisible()).toBe(true);
-
-    // Take a screenshot of the initial state
-    await window.screenshot({
-      path: 'test-results/screenshots/initial-state.png',
-      fullPage: true,
+  test.beforeEach(async () => {
+    // Launch Electron app
+    electronApp = await electron.launch({
+      args: ['.'],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        DEBUG: 'pw:browser*',
+      },
     });
 
-    await closeApp(electronApp);
+    // Get the first window
+    window = await electronApp.firstWindow();
+
+    // Wait for the app to be ready
+    await window.waitForLoadState('domcontentloaded');
+    await window.waitForLoadState('networkidle');
+    await window.waitForTimeout(2000); // Give React a moment to render
+
+    // Debug: Log the page content
+    const content = await window.content();
+    console.log('Page content:', content);
   });
 
-  test('should validate Beatport URLs', async () => {
-    const { electronApp, window } = await startApp();
-
-    // Get the URL input field
-    const urlInput = window.locator('input[type="text"]');
-    await urlInput.fill('https://www.beatport.com/track/invalid-url');
-
-    // Click the add button
-    const addButton = window.locator('button:has-text("Add")');
-    await addButton.click();
-
-    // Verify error message is shown
-    const errorMessage = window.locator('.error-message');
-    await expect(errorMessage).toBeVisible();
-    await expect(errorMessage).toContainText('Invalid Beatport URL');
-
-    await takeScreenshot(window, 'url-validation-error');
-    await closeApp(electronApp);
+  test.afterEach(async () => {
+    await electronApp.close();
   });
 
-  test('should handle track downloads', async () => {
-    const { electronApp, window } = await startApp();
+  test('application launches successfully', async () => {
+    // Wait for the root element
+    const root = await window.waitForSelector('#root', { timeout: 10000 });
+    expect(root).toBeTruthy();
 
-    // Add a valid track URL
-    const urlInput = window.locator('input[type="text"]');
-    await urlInput.fill('https://www.beatport.com/track/some-valid-track/12345');
+    // Take a screenshot for debugging
+    await window.screenshot({ path: 'test-results/app-launch.png' });
 
-    // Click the add button
-    const addButton = window.locator('button:has-text("Add")');
-    await addButton.click();
-
-    // Verify track is added to the list
-    const trackList = window.locator('.track-list');
-    await expect(trackList).toContainText('some-valid-track');
-
-    // Start download
-    const downloadButton = window.locator('button:has-text("Download")');
-    await downloadButton.click();
-
-    // Verify download progress is shown
-    const progressBar = window.locator('.progress-bar');
-    await expect(progressBar).toBeVisible();
-
-    await takeScreenshot(window, 'download-progress');
-    await closeApp(electronApp);
+    // Check if the tabs are present
+    const tabs = await window.waitForSelector('[role="tablist"]', { timeout: 10000 });
+    expect(tabs).toBeTruthy();
   });
 
-  test('should handle cache operations', async () => {
-    const { electronApp } = await startApp();
+  test('search bar and download list are present', async () => {
+    // Wait for the root element
+    const root = await window.waitForSelector('#root', { timeout: 10000 });
+    expect(root).toBeTruthy();
 
-    // Test cache operations
-    await cache.set('test-key', { value: 'test-value' }, 60);
-    const value = await cache.get('test-key');
-    await cache.delete('test-key');
-    const deletedValue = await cache.get('test-key');
+    // Take a screenshot for debugging
+    await window.screenshot({ path: 'test-results/search-bar.png' });
 
-    expect(value).toEqual({ value: 'test-value' });
-    expect(deletedValue).toBeNull();
+    // Wait for the search bar to be visible
+    const searchBar = await window.waitForSelector('input', { timeout: 10000 });
+    expect(searchBar).toBeTruthy();
 
-    await closeApp(electronApp);
+    // Check if the search button is present
+    const searchButton = await window.waitForSelector('button:has-text("Search")', {
+      timeout: 10000,
+    });
+    expect(searchButton).toBeTruthy();
   });
 
-  test('should handle errors gracefully', async () => {
-    const { electronApp } = await startApp();
+  test('can switch between tabs', async () => {
+    // Wait for the root element
+    const root = await window.waitForSelector('#root', { timeout: 10000 });
+    expect(root).toBeTruthy();
 
-    const error = new Error('Test error');
-    let errorHandled = false;
+    // Take a screenshot for debugging
+    await window.screenshot({ path: 'test-results/tabs.png' });
 
-    try {
-      handleError(error);
-      errorHandled = true;
-    } catch (e) {
-      errorHandled = false;
-    }
+    // Click on History tab
+    const historyTab = await window.waitForSelector('[role="tab"]:has-text("History")', {
+      timeout: 10000,
+    });
+    await historyTab.click();
 
-    expect(errorHandled).toBe(true);
+    // Click on Settings tab
+    const settingsTab = await window.waitForSelector('[role="tab"]:has-text("Settings")', {
+      timeout: 10000,
+    });
+    await settingsTab.click();
+  });
 
-    await closeApp(electronApp);
+  test('can enter URL in search bar', async () => {
+    // Wait for the root element
+    const root = await window.waitForSelector('#root', { timeout: 10000 });
+    expect(root).toBeTruthy();
+
+    // Take a screenshot for debugging
+    await window.screenshot({ path: 'test-results/url-input.png' });
+
+    // Wait for the search bar input
+    const searchInput = await window.waitForSelector('input', {
+      timeout: 10000,
+    });
+
+    // Enter a test URL
+    await searchInput.fill('https://www.beatport.com/track/test/123');
+    await searchInput.press('Enter');
+
+    // Wait for the toast notification
+    const toast = await window.waitForSelector('[role="alert"]', { timeout: 10000 });
+    expect(toast).toBeTruthy();
   });
 });

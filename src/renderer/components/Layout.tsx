@@ -18,6 +18,7 @@ import {
   CloudDownload as DownloadIcon,
   Settings as SettingsIcon,
   History as HistoryIcon,
+  Settings,
 } from '@mui/icons-material';
 import { DownloadManager } from './DownloadManager';
 // Removed the import for Settings as it's not a module

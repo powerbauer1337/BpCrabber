@@ -8,6 +8,20 @@ export interface StoreSchema {
   downloads: {
     history: DownloadHistory[];
   };
+  window: {
+    state: {
+      bounds: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+      isMaximized: boolean;
+    };
+  };
+  active: {
+    downloads: Array<[string, number]>;
+  };
 }
 
 export interface DownloadHistory {
@@ -39,6 +53,16 @@ export enum ErrorCode {
   RATE_LIMIT = 'RATE_LIMIT',
   SERVER_ERROR = 'SERVER_ERROR',
   CLIENT_ERROR = 'CLIENT_ERROR',
+}
+
+export interface TrackInfo {
+  id: string;
+  url: string;
+  title: string;
+  artist: string;
+  status: 'queued' | 'downloading' | 'completed' | 'error';
+  progress: number;
+  error?: string;
 }
 
 export type StoreKey = keyof StoreSchema;

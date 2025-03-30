@@ -1,36 +1,37 @@
 import { ipcMain } from 'electron';
-import {
-  IpcChannels,
-  ApiResponse,
-  Settings,
-  TrackInfo,
-  DownloadProgress,
-} from '../../shared/ipc/types';
-import { AppState } from '../../main';
-import { handleError, ErrorCode } from '../../shared/utils/errors';
-import { store } from '../../config/store';
-import { logger } from '../../shared/utils/logger';
+import { IpcChannels, ApiResponse, Settings } from '@shared/ipc/types';
+import { TrackInfo } from '@shared/types';
+import { store } from '@config/store';
+import type { AppState } from '../main';
+import { logger } from '@shared/utils/logger';
+import { ErrorCode } from '@shared/utils/errors';
+
+function createErrorResponse(error: unknown): ApiResponse<any> {
+  logger.error('IPC handler error:', error);
+  return {
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error occurred',
+    code: ErrorCode.UNKNOWN,
+  };
+}
 
 export function setupIpcHandlers(appState: AppState): void {
   // Authentication handlers
-  ipcMain.handle(
-    IpcChannels.LOGIN,
-    async (_event, _username: string, _password: string): Promise<ApiResponse<boolean>> => {
-      try {
-        // TODO: Implement Beatport authentication
-        return { success: true, data: true };
-      } catch (error) {
-        return handleError(error);
-      }
+  ipcMain.handle(IpcChannels.LOGIN, async (_event, _username: string, _password: string) => {
+    try {
+      // TODO: Implement login logic
+      return { success: true, data: true };
+    } catch (error) {
+      return createErrorResponse(error);
     }
-  );
+  });
 
   ipcMain.handle(IpcChannels.LOGOUT, async (): Promise<ApiResponse<void>> => {
     try {
       // TODO: Implement logout
       return { success: true, data: undefined };
     } catch (error) {
-      return handleError(error);
+      return createErrorResponse(error);
     }
   });
 
@@ -45,48 +46,26 @@ export function setupIpcHandlers(appState: AppState): void {
           title: 'Test Track',
           artist: 'Test Artist',
           url,
+          status: 'error',
+          progress: 0,
         };
         return { success: true, data: mockTrackInfo };
       } catch (error) {
-        return handleError(error);
+        return createErrorResponse(error);
       }
     }
   );
 
-  ipcMain.handle(
-    IpcChannels.DOWNLOAD_TRACK,
-    async (_event, url: string): Promise<ApiResponse<TrackInfo>> => {
-      try {
-        const downloadService = appState.getDownloadService();
-        const mockTrackInfo: TrackInfo = {
-          id: '123',
-          title: 'Test Track',
-          artist: 'Test Artist',
-          url,
-        };
-
-        const onProgress = (progress: DownloadProgress) => {
-          appState.getMainWindow()?.webContents.send(IpcChannels.DOWNLOAD_PROGRESS, progress);
-        };
-
-        const result = await downloadService.downloadTrack(url, mockTrackInfo, onProgress);
-
-        if (result.success) {
-          appState.getMainWindow()?.webContents.send(IpcChannels.DOWNLOAD_COMPLETE, result);
-        } else {
-          appState.getMainWindow()?.webContents.send(IpcChannels.DOWNLOAD_ERROR, {
-            success: false,
-            error: result.error || 'Unknown error',
-            code: ErrorCode.DOWNLOAD,
-          });
-        }
-
-        return { success: true, data: mockTrackInfo };
-      } catch (error) {
-        return handleError(error);
-      }
+  ipcMain.handle(IpcChannels.DOWNLOAD_TRACK, async (_event, url: string) => {
+    try {
+      const downloadService = appState.getDownloadService();
+      const metadata = { title: 'Unknown', artist: 'Unknown' }; // TODO: Fetch real metadata
+      await downloadService.startDownload(url, metadata);
+      return { success: true, data: undefined };
+    } catch (error) {
+      return createErrorResponse(error);
     }
-  );
+  });
 
   ipcMain.handle(
     IpcChannels.CANCEL_DOWNLOAD,
@@ -96,28 +75,18 @@ export function setupIpcHandlers(appState: AppState): void {
         downloadService.cancelDownload(url);
         return { success: true, data: undefined };
       } catch (error) {
-        return handleError(error);
+        return createErrorResponse(error);
       }
     }
   );
 
   // Settings handlers
-  ipcMain.handle(IpcChannels.GET_SETTINGS, async (): Promise<ApiResponse<Settings>> => {
+  ipcMain.handle(IpcChannels.GET_SETTINGS, async () => {
     try {
-      const defaultSettings: Settings = {
-        downloadPath: appState.getDownloadService().getDownloadPath(),
-        maxConcurrentDownloads: 3,
-        autoCheckUpdates: true,
-        saveMetadata: true,
-        fileNamingTemplate: '{artist} - {title}',
-        audioQuality: 'high',
-      };
-
-      const storedSettings = store.get('settings');
-      const settings: Settings = { ...defaultSettings, ...storedSettings };
+      const settings = store.get('settings') as Settings;
       return { success: true, data: settings };
     } catch (error) {
-      return handleError(error);
+      return createErrorResponse(error);
     }
   });
 
@@ -129,7 +98,7 @@ export function setupIpcHandlers(appState: AppState): void {
         appState.getDownloadService().setDownloadPath(settings.downloadPath);
         return { success: true, data: undefined };
       } catch (error) {
-        return handleError(error);
+        return createErrorResponse(error);
       }
     }
   );
@@ -140,7 +109,7 @@ export function setupIpcHandlers(appState: AppState): void {
       // TODO: Implement log retrieval
       return { success: true, data: [] };
     } catch (error) {
-      return handleError(error);
+      return createErrorResponse(error);
     }
   });
 

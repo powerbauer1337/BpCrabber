@@ -1,43 +1,41 @@
-import { PlaywrightTestConfig } from '@playwright/test';
-import path from 'path';
+import { defineConfig } from '@playwright/test';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const outputDir = path.join(process.cwd(), 'test-results');
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const config: PlaywrightTestConfig = {
+export default defineConfig({
   testDir: './tests',
-  timeout: 60000,
+  timeout: 30000,
   expect: {
     timeout: 10000,
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['list'],
-    ['json', { outputFile: 'test-results/test-results.json' }],
-  ],
+  reporter: process.env.CI ? 'dot' : 'list',
   use: {
     actionTimeout: 15000,
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
-    screenshot: {
-      mode: 'only-on-failure',
-      fullPage: true,
-    },
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'on-first-retry',
   },
-  outputDir,
-  preserveOutput: process.env.CI ? 'failures-only' : 'always',
   projects: [
     {
       name: 'Electron',
       testMatch: /.*\.spec\.ts/,
-      testDir: './tests',
-      snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
+      use: {
+        browserName: 'chromium',
+        launchOptions: {
+          args: ['--no-sandbox'],
+          executablePath:
+            process.env.ELECTRON_EXECUTABLE_PATH || resolve('node_modules/.bin/electron'),
+        },
+        baseURL:
+          process.env.NODE_ENV === 'development'
+            ? 'http://localhost:5173'
+            : `file://${resolve(__dirname, 'dist/renderer/index.html')}`,
+      },
     },
   ],
-  globalSetup: require.resolve('./tests/global-setup.ts'),
-  globalTeardown: require.resolve('./tests/global-teardown.ts'),
-};
-
-export default config;
+});

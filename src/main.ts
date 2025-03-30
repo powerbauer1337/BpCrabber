@@ -1,64 +1,23 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'path';
 import { electronApp, is } from '@electron-toolkit/utils';
-import { store, STORE_KEYS } from './config/store';
-import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
-import { DownloadService } from './services/downloadService';
-import { setupIpcHandlers } from './electron/ipc/handlers';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
+import { logger } from './utils/logger';
+import { setupErrorHandlers } from './main/errorHandler';
+import { setupSecurityPolicies } from './config/security';
+import { AppState } from './electron/main';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-// Global state management
-class AppState {
-  private mainWindow: BrowserWindow | null = null;
-  private downloadService: DownloadService;
-  private activeDownloads = new Map<string, number>();
-  private downloadPath: string;
-
-  constructor() {
-    const settings = store.get(STORE_KEYS.SETTINGS);
-    this.downloadPath = settings.downloadPath;
-    this.downloadService = new DownloadService(this.downloadPath);
-  }
-
-  getMainWindow() {
-    return this.mainWindow;
-  }
-
-  getDownloadService() {
-    return this.downloadService;
-  }
-
-  getActiveDownloads() {
-    return this.activeDownloads;
-  }
-
-  setMainWindow(window: BrowserWindow) {
-    this.mainWindow = window;
-  }
-
-  updateProgress() {
-    if (this.activeDownloads.size === 0) {
-      this.mainWindow?.setProgressBar(-1);
-      return;
-    }
-
-    const totalProgress = Array.from(this.activeDownloads.values()).reduce(
-      (sum, progress) => sum + progress,
-      0
-    );
-    const averageProgress = totalProgress / this.activeDownloads.size;
-    this.mainWindow?.setProgressBar(averageProgress / 100);
-  }
-}
-
 const appState = new AppState();
 
 const createWindow = async () => {
+  logger.info('Creating main window');
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -70,6 +29,9 @@ const createWindow = async () => {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
     },
   });
 
@@ -77,10 +39,13 @@ const createWindow = async () => {
 
   // HMR for development
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    logger.debug('Loading development URL:', process.env.ELECTRON_RENDERER_URL);
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
     mainWindow.webContents.openDevTools();
   } else {
-    // Placeholder for the removed loadURL function
+    // Production loading
+    logger.debug('Loading production build');
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
   // Make all links open with the browser, not with the application
@@ -91,19 +56,61 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
+  // Prevent navigation to unknown protocols
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowedProtocols = ['https:', 'file:'];
+    try {
+      const parsedUrl = new URL(url);
+      if (!allowedProtocols.includes(parsedUrl.protocol)) {
+        event.preventDefault();
+        logger.warn(`Blocked navigation to disallowed protocol: ${parsedUrl.protocol}`);
+      }
+    } catch (error) {
+      event.preventDefault();
+      logger.error('Invalid URL in navigation:', error);
+    }
+  });
+
   // Show window when ready
   mainWindow.on('ready-to-show', () => {
+    logger.debug('Main window ready to show');
     mainWindow.show();
   });
+
+  // Log window state changes
+  mainWindow.on('maximize', () => logger.debug('Window maximized'));
+  mainWindow.on('unmaximize', () => logger.debug('Window unmaximized'));
+  mainWindow.on('minimize', () => logger.debug('Window minimized'));
+  mainWindow.on('restore', () => logger.debug('Window restored'));
+  mainWindow.on('close', () => logger.debug('Window closing'));
 };
 
+// Initialize error handlers
+setupErrorHandlers();
+
+// Initialize security policies
+setupSecurityPolicies();
+
+// Disable navigation to file protocol in production
+if (!is.dev) {
+  app.on('web-contents-created', (_, contents) => {
+    contents.on('will-navigate', (event, url) => {
+      if (url.startsWith('file:')) {
+        event.preventDefault();
+        logger.warn('Blocked navigation to file protocol in production');
+      }
+    });
+  });
+}
+
 app.whenReady().then(() => {
+  logger.logAppStart();
+
   // Initialize electron app
   electronApp.setAppUserModelId('com.beatportdownloader');
 
   // Initialize app
   createWindow();
-  setupIpcHandlers(appState);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -111,40 +118,46 @@ app.whenReady().then(() => {
 
   // Auto updater setup
   if (!is.dev) {
+    logger.info('Setting up auto-updater');
     autoUpdater.checkForUpdatesAndNotify();
 
     autoUpdater.on('error', error => {
-      log.error('Auto updater error:', error);
+      logger.error('Auto updater error:', error);
     });
 
-    autoUpdater.on('update-available', () => {
-      log.info('Update available');
+    autoUpdater.on('checking-for-update', () => {
+      logger.info('Checking for updates');
+    });
+
+    autoUpdater.on('update-available', info => {
+      logger.info('Update available:', info);
       appState.getMainWindow()?.webContents.send('update-available');
     });
 
-    autoUpdater.on('update-downloaded', () => {
-      log.info('Update downloaded');
+    autoUpdater.on('update-not-available', info => {
+      logger.info('Update not available:', info);
+    });
+
+    autoUpdater.on('download-progress', progressObj => {
+      logger.debug('Download progress:', progressObj);
+    });
+
+    autoUpdater.on('update-downloaded', info => {
+      logger.info('Update downloaded:', info);
       appState.getMainWindow()?.webContents.send('update-downloaded');
     });
   }
 });
 
 app.on('window-all-closed', () => {
+  logger.debug('All windows closed');
   if (process.platform !== 'darwin') {
+    logger.logAppExit();
     app.quit();
   }
 });
 
-// Global error handlers
-process.on('uncaughtException', (error: Error) => {
-  log.error('Uncaught Exception:', error);
-  app.quit();
+// Cleanup before exit
+app.on('before-quit', () => {
+  logger.logAppExit();
 });
-
-process.on('unhandledRejection', (reason: unknown) => {
-  log.error('Unhandled Rejection:', reason);
-  app.quit();
-});
-
-// Export for type support
-export type { AppState };

@@ -1,46 +1,35 @@
-import { createTheme } from '@mui/material';
+import { extendTheme, type ThemeConfig } from '@chakra-ui/react';
 
-export const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#1DB954', // Spotify-like green
-      contrastText: '#fff',
+const config: ThemeConfig = {
+  initialColorMode: 'dark',
+  useSystemColorMode: false,
+};
+
+export const theme = extendTheme({
+  config,
+  styles: {
+    global: {
+      body: {
+        bg: 'gray.900',
+        color: 'white',
+      },
     },
-    secondary: {
-      main: '#535353',
-      contrastText: '#fff',
-    },
-    background: {
-      default: '#121212',
-      paper: '#181818',
-    },
-    text: {
-      primary: '#fff',
-      secondary: 'rgba(255, 255, 255, 0.7)',
-    },
-    divider: 'rgba(255, 255, 255, 0.12)',
   },
   components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
+    Button: {
+      defaultProps: {
+        colorScheme: 'blue',
       },
     },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-        },
+    Input: {
+      defaultProps: {
+        focusBorderColor: 'blue.400',
       },
     },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          background: '#181818',
-        },
+    Tabs: {
+      defaultProps: {
+        colorScheme: 'blue',
+        variant: 'line',
       },
     },
   },

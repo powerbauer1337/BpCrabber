@@ -16,7 +16,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ onSubmit }) => {
     setIsLoading(true);
     try {
       // Validate URL
-      const trackId = window.api.getTrackId(url);
+      const trackId = (window as any).api.getTrackId(url);
       if (!trackId) {
         throw new Error('Invalid track URL');
       }

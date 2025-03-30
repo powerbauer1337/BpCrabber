@@ -21,9 +21,11 @@
     "electron:build": "tsup",
     "electron:build:watch": "tsup --watch",
     "electron:start": "electron .",
-    "build": "electron-vite build",
-    "build:next": "next build",
-    "build:electron": "tsup",
+    "build": "electron-vite build && electron-builder",
+    "build:dir": "electron-vite build && electron-builder --dir",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:linux": "electron-vite build && electron-builder --linux",
     "start": "electron-forge start",
     "pack": "electron-forge package",
     "dist": "npm run build && electron-builder",
@@ -33,22 +35,27 @@
     "electron:dist:linux": "electron-builder --linux",
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
     "prepare": "husky install",
     "preview": "electron-vite preview",
-    "make": "electron-forge make"
+    "make": "electron-forge make",
+    "release": "electron-builder -p always"
   },
   "license": "MIT",
   "dependencies": {
+    "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/tabs": "^2.1.8",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
-    "@emotion/react": "^11.11.1",
+    "@emotion/react": "^11.11.3",
     "@emotion/server": "^11.11.0",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.3",
@@ -62,6 +69,7 @@
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.1.1",
+    "framer-motion": "^10.18.0",
     "get-port-please": "^3.1.2",
     "helmet": "^8.1.0",
     "ini": "^4.1.2",
@@ -70,6 +78,7 @@
     "node-fetch": "^3.3.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
     "winston": "^3.10.0",
     "zustand": "^5.0.3"
   },
@@ -82,6 +91,8 @@
     "@electron-forge/plugin-vite": "^7.8.0",
     "@electron-forge/publisher-github": "^7.3.0",
     "@playwright/test": "^1.51.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.1",
     "@types/ini": "^4.1.0",
@@ -126,21 +137,33 @@
     "directories": {
       "output": "release"
     },
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    },
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
-      ]
+      ],
+      "artifactName": "${productName}-${version}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "artifactName": "${productName}-${version}.${ext}",
+      "category": "Audio"
     }
   }
 }

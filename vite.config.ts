@@ -15,6 +15,7 @@ export default defineConfig({
       '@electron': resolve(__dirname, './src/electron'),
       '@renderer': resolve(__dirname, './src/renderer'),
       '@config': resolve(__dirname, './src/config'),
+      '@components': resolve(__dirname, './src/renderer/src/components'),
     },
   },
   build: {

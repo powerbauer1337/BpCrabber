@@ -2,37 +2,124 @@ import { app, BrowserWindow, BrowserView, ipcMain } from 'electron';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { autoUpdater } from 'electron-updater/out/main.js';
-import { store } from '@config/store';
+import { store, STORE_KEYS } from '@config/store';
 import { DownloadService } from '@shared/services/downloadService';
 import { createSecurityHeaders } from './utils/security';
 import { setupIpcHandlers } from './ipc/handlers';
-import type { StoreSchema } from '@shared/types';
-import serve from 'electron-serve';
+import { logger } from '@shared/utils/logger';
+import { DownloadQueue } from '@shared/services/downloadQueue';
+import type { TrackInfo, DownloadHistory } from '@shared/types';
 import { is } from '@electron-toolkit/utils';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const loadURL = serve({ directory: 'out' });
 
 // Global state management
 export class AppState {
   private mainWindow: BrowserWindow | null = null;
   private beatportView: BrowserView | null = null;
   private downloadService: DownloadService;
+  private downloadQueue: DownloadQueue;
   private activeDownloads = new Map<string, number>();
+  private downloadPath: string;
 
   constructor() {
-    this.downloadService = new DownloadService(store.get('settings', 'downloadPath'));
+    const settings = store.get(STORE_KEYS.SETTINGS);
+    this.downloadPath = settings.downloadPath;
+    this.downloadService = new DownloadService(this.downloadPath);
+
+    // Initialize download queue
+    this.downloadQueue = DownloadQueue.getInstance(settings.maxConcurrentDownloads);
+    this.setupDownloadQueue();
+
+    // Restore active downloads from store
+    const savedDownloads = store.get(STORE_KEYS.ACTIVE_DOWNLOADS, []) as Array<[string, number]>;
+    savedDownloads.forEach(([id, progress]) => this.activeDownloads.set(id, progress));
+  }
+
+  private setupDownloadQueue(): void {
+    this.downloadQueue.setDownloadHandler(async (track: TrackInfo) => {
+      await this.downloadService.startDownload(track.url, {
+        title: track.title,
+        artist: track.artist,
+      });
+    });
+
+    this.downloadQueue.on('taskProgress', ({ taskId, progress }) => {
+      this.activeDownloads.set(taskId, progress);
+      this.updateProgress();
+
+      // Notify renderer
+      this.mainWindow?.webContents.send('download:progress', { taskId, progress });
+    });
+
+    this.downloadQueue.on('taskCompleted', task => {
+      this.activeDownloads.delete(task.id);
+      this.updateProgress();
+
+      // Add to download history
+      const history = store.get(STORE_KEYS.DOWNLOADS_HISTORY, []) as DownloadHistory[];
+      const downloadPath = join(
+        this.downloadPath,
+        `${task.track.artist} - ${task.track.title}.mp3`
+      );
+
+      history.push({
+        id: task.id,
+        url: task.track.url,
+        title: task.track.title,
+        artist: task.track.artist,
+        downloadedAt: new Date().toISOString(),
+        path: downloadPath,
+      });
+
+      store.set(STORE_KEYS.DOWNLOADS_HISTORY, history);
+
+      // Notify renderer
+      this.mainWindow?.webContents.send('download:complete', task);
+    });
+
+    this.downloadQueue.on('taskError', task => {
+      this.activeDownloads.delete(task.id);
+      this.updateProgress();
+
+      // Notify renderer
+      this.mainWindow?.webContents.send('download:error', {
+        taskId: task.id,
+        error: task.error?.message,
+      });
+    });
+  }
+
+  private updateProgress(): void {
+    if (this.activeDownloads.size === 0) {
+      this.mainWindow?.setProgressBar(-1);
+      return;
+    }
+
+    const totalProgress = Array.from(this.activeDownloads.values()).reduce(
+      (sum, progress) => sum + progress,
+      0
+    );
+    const averageProgress = totalProgress / this.activeDownloads.size;
+    this.mainWindow?.setProgressBar(averageProgress / 100);
   }
 
   getMainWindow() {
     return this.mainWindow;
   }
+
   getBeatportView() {
     return this.beatportView;
   }
+
   getDownloadService() {
     return this.downloadService;
   }
+
+  getDownloadQueue() {
+    return this.downloadQueue;
+  }
+
   getActiveDownloads() {
     return this.activeDownloads;
   }
@@ -73,29 +160,20 @@ function createWindow() {
   beatportView.setBounds({ x: 0, y: 0, width: 1200, height: 800 });
 
   // Add security headers
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        ...createSecurityHeaders(),
-      },
-    });
-  });
+  createSecurityHeaders(mainWindow);
 
   if (is.dev) {
-    // In development, use Next.js dev server
-    mainWindow.loadURL('http://localhost:3000').catch(() => {
+    // In development, use dev server
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
       console.log('Failed to load dev server, retrying...');
       // Retry after a short delay
-      setTimeout(() => mainWindow.loadURL('http://localhost:3000'), 1000);
+      setTimeout(() => mainWindow.loadURL('http://localhost:5173'), 1000);
     });
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load the built static files
-    loadURL(mainWindow).catch(err => {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html')).catch(err => {
       console.error('Failed to load production files:', err);
-      // Fallback to loading index.html directly
-      mainWindow.loadFile(join(__dirname, '../../out/index.html')).catch(console.error);
     });
   }
 
@@ -116,7 +194,7 @@ function createWindow() {
     console.error('Failed to load:', errorCode, errorDescription);
     if (is.dev) {
       // In dev, retry loading
-      setTimeout(() => mainWindow.loadURL('http://localhost:3000'), 1000);
+      setTimeout(() => mainWindow.loadURL('http://localhost:5173'), 1000);
     }
   });
 }
@@ -177,12 +255,56 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Error handling
-process.on('uncaughtException', error => {
-  console.error('Uncaught Exception:', error);
-  app.quit();
+// Enhanced error handling
+function handleError(error: Error, errorType: 'uncaught' | 'unhandled'): void {
+  logger.error(`${errorType === 'uncaught' ? 'Uncaught Exception' : 'Unhandled Rejection'}:`, {
+    error: error.message,
+    stack: error.stack,
+    type: error.name,
+  });
+
+  // Save application state
+  try {
+    const mainWindow = appState.getMainWindow();
+    if (mainWindow) {
+      const bounds = mainWindow.getBounds();
+      store.set(STORE_KEYS.WINDOW_STATE, {
+        bounds,
+        isMaximized: mainWindow.isMaximized(),
+      });
+    }
+
+    // Save active downloads state
+    const activeDownloads = appState.getActiveDownloads();
+    store.set(STORE_KEYS.ACTIVE_DOWNLOADS, Array.from(activeDownloads.entries()));
+  } catch (saveError) {
+    logger.error('Failed to save application state:', saveError);
+  }
+
+  // Show error dialog to user
+  if (appState.getMainWindow()) {
+    appState.getMainWindow()?.webContents.send('app:error', {
+      type: errorType,
+      message: error.message,
+    });
+  }
+
+  // Wait briefly for error to be logged and state to be saved
+  setTimeout(() => {
+    app.exit(1);
+  }, 1000);
+}
+
+// Error handlers
+process.on('uncaughtException', (error: Error) => {
+  handleError(error, 'uncaught');
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on('unhandledRejection', (reason: unknown) => {
+  handleError(reason instanceof Error ? reason : new Error(String(reason)), 'unhandled');
+});
+
+// Fix unused url parameter
+ipcMain.on('download-track', async (_event, _url) => {
+  // ... existing code ...
 });

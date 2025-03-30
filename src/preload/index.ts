@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 import { IpcChannels, IpcRendererHandlers } from '../shared/ipc/types';
+import type { BeatportAPI } from '../types/api';
 
 // Helper function to extract track ID from Beatport URL
 const extractTrackId = (url: string) => {
@@ -15,60 +16,11 @@ const cleanTrackName = (name: string) => {
     .replace(/\s+/g, ' '); // Normalize spaces
 };
 
-// Custom APIs for renderer
-const api = {
-  login: async (username: string, password: string) => {
-    return await ipcRenderer.invoke('login', username, password);
-  },
-  logout: async () => {
-    return await ipcRenderer.invoke('logout');
-  },
-  detectTracks: async (url: string) => {
-    return await ipcRenderer.invoke('detect-tracks', url);
-  },
-  downloadTrack: async (url: string) => {
-    return await ipcRenderer.invoke('download-track', url);
-  },
-  onDownloadProgress: (callback: (progress: { url: string; progress: number }) => void) => {
-    ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
-    return () => {
-      ipcRenderer.removeAllListeners('download-progress');
-    };
-  },
-  onDownloadComplete: (
-    callback: (result: { url: string; success: boolean; error?: string }) => void
-  ) => {
-    ipcRenderer.on('download-complete', (_event, result) => callback(result));
-    return () => {
-      ipcRenderer.removeAllListeners('download-complete');
-    };
-  },
-  onLogMessage: (callback: (message: string) => void) => {
-    ipcRenderer.on('log-message', (_event, message) => callback(message));
-    return () => {
-      ipcRenderer.removeAllListeners('log-message');
-    };
-  },
-  onUpdateAvailable: (callback: (version: string) => void) => {
-    ipcRenderer.on('update-available', (_event, version) => callback(version));
-    return () => {
-      ipcRenderer.removeAllListeners('update-available');
-    };
-  },
-  // New methods for track detection
-  isTrackUrl: (url: string) => {
-    return url.includes('beatport.com/track/');
-  },
-  getTrackId: extractTrackId,
-};
-
 // Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+// renderer only if context isolation is enabled
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('beatport', api);
+    // Expose electron-specific APIs
     contextBridge.exposeInMainWorld('electron', {
       // IPC Send/Invoke Methods
       login: (username: string, password: string) =>
@@ -94,15 +46,31 @@ if (process.contextIsolated) {
         ipcRenderer.on(IpcChannels.UPDATE_AVAILABLE, (_, info) => callback(info)),
       onUpdateDownloaded: (callback: IpcRendererHandlers[typeof IpcChannels.UPDATE_DOWNLOADED]) =>
         ipcRenderer.on(IpcChannels.UPDATE_DOWNLOADED, (_, info) => callback(info)),
+
+      // Helper functions
+      isTrackUrl: (url: string) => url.includes('beatport.com/track/'),
+      getTrackId: extractTrackId,
     });
+
+    // Expose Beatport-specific APIs
+    contextBridge.exposeInMainWorld('beatport', {
+      login: (username: string, password: string) =>
+        ipcRenderer.invoke(IpcChannels.LOGIN, username, password),
+      downloadTrack: (url: string) => ipcRenderer.invoke(IpcChannels.DOWNLOAD_TRACK, url),
+      getDownloadProgress: () => ipcRenderer.invoke(IpcChannels.GET_DOWNLOAD_PROGRESS),
+      cancelDownload: () => ipcRenderer.invoke(IpcChannels.CANCEL_DOWNLOAD),
+      getSettings: () => ipcRenderer.invoke(IpcChannels.GET_SETTINGS),
+      saveSettings: (settings: any) => ipcRenderer.invoke(IpcChannels.SAVE_SETTINGS, settings),
+      getLogs: () => ipcRenderer.invoke(IpcChannels.GET_LOGS),
+      checkForUpdates: () => ipcRenderer.invoke(IpcChannels.CHECK_UPDATES),
+      getTrackInfo: (url: string) => ipcRenderer.invoke(IpcChannels.GET_TRACK_INFO, url),
+    } as BeatportAPI);
   } catch (error) {
-    console.error(error);
+    console.error('Failed to expose APIs:', error);
   }
 } else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI;
-  // @ts-ignore (define in dts)
-  window.beatport = api;
+  // If context isolation is disabled, add to window object directly
+  Object.assign(window, { electron: electronAPI });
 }
 
 // Handle messages from webview

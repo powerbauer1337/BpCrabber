@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Alert } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, TextField, Typography, Alert, CircularProgress } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
 export const LoginForm: React.FC = () => {
@@ -8,6 +8,26 @@ export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+
+  useEffect(() => {
+    // Check login status on mount
+    const checkLoginStatus = async () => {
+      try {
+        const settings = await window.beatport.getSettings();
+        if (settings?.username) {
+          setUsername(settings.username);
+          setIsLoggedIn(true);
+        }
+      } catch (err) {
+        console.error('Failed to check login status:', err);
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -18,6 +38,8 @@ export const LoginForm: React.FC = () => {
 
       if (success) {
         setIsLoggedIn(true);
+        // Save username in settings
+        await window.beatport.saveSettings({ username });
       } else {
         setError('Login failed. Please check your credentials.');
       }
@@ -29,11 +51,28 @@ export const LoginForm: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUsername('');
-    setPassword('');
+  const handleLogout = async () => {
+    try {
+      setLoading(true);
+      // Clear settings
+      await window.beatport.saveSettings({});
+      setIsLoggedIn(false);
+      setUsername('');
+      setPassword('');
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (initializing) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (isLoggedIn) {
     return (
@@ -41,9 +80,9 @@ export const LoginForm: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Logged in as {username}
         </Typography>
-        <Button variant="outlined" color="primary" onClick={handleLogout}>
+        <LoadingButton variant="outlined" color="primary" onClick={handleLogout} loading={loading}>
           Logout
-        </Button>
+        </LoadingButton>
       </Box>
     );
   }
@@ -66,6 +105,7 @@ export const LoginForm: React.FC = () => {
           e.preventDefault();
           handleLogin();
         }}
+        noValidate
       >
         <TextField
           fullWidth
@@ -74,6 +114,8 @@ export const LoginForm: React.FC = () => {
           onChange={e => setUsername(e.target.value)}
           margin="normal"
           required
+          disabled={loading}
+          autoComplete="username"
         />
 
         <TextField
@@ -84,6 +126,8 @@ export const LoginForm: React.FC = () => {
           onChange={e => setPassword(e.target.value)}
           margin="normal"
           required
+          disabled={loading}
+          autoComplete="current-password"
         />
 
         <LoadingButton
@@ -93,6 +137,7 @@ export const LoginForm: React.FC = () => {
           loading={loading}
           sx={{ mt: 2 }}
           fullWidth
+          disabled={!username || !password}
         >
           Login
         </LoadingButton>

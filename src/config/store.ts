@@ -15,6 +15,20 @@ interface StoreSchema {
       filePath: string;
     }>;
   };
+  window: {
+    state: {
+      bounds: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+      isMaximized: boolean;
+    };
+  };
+  active: {
+    downloads: Array<[string, number]>;
+  };
 }
 
 const schema: Schema<StoreSchema> = {
@@ -61,6 +75,52 @@ const schema: Schema<StoreSchema> = {
     required: ['history'],
     default: {},
   },
+  window: {
+    type: 'object',
+    properties: {
+      state: {
+        type: 'object',
+        properties: {
+          bounds: {
+            type: 'object',
+            properties: {
+              x: { type: 'number' },
+              y: { type: 'number' },
+              width: { type: 'number' },
+              height: { type: 'number' },
+            },
+            required: ['x', 'y', 'width', 'height'],
+          },
+          isMaximized: { type: 'boolean' },
+        },
+        required: ['bounds', 'isMaximized'],
+      },
+    },
+    required: ['state'],
+    default: {
+      state: {
+        bounds: { x: 0, y: 0, width: 1200, height: 800 },
+        isMaximized: false,
+      },
+    },
+  },
+  active: {
+    type: 'object',
+    properties: {
+      downloads: {
+        type: 'array',
+        items: {
+          type: 'array',
+          minItems: 2,
+          maxItems: 2,
+          items: [{ type: 'string' }, { type: 'number' }],
+        },
+        default: [],
+      },
+    },
+    required: ['downloads'],
+    default: { downloads: [] },
+  },
 };
 
 export const store = new Store<StoreSchema>({
@@ -75,4 +135,6 @@ export const STORE_KEYS = {
   SETTINGS: 'settings',
   DOWNLOADS: 'downloads',
   DOWNLOADS_HISTORY: 'downloads.history',
+  WINDOW_STATE: 'window.state',
+  ACTIVE_DOWNLOADS: 'active.downloads',
 } as const;

@@ -1,94 +1,128 @@
-import winston from 'winston';
-import path from 'path';
+import { createLogger, format, transports } from 'winston';
+import { join } from 'path';
+import { app } from 'electron';
 
-// Define log levels
-const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  http: 3,
-  debug: 4,
-};
+const LOG_DIR = process.env.LOG_DIR || join(app?.getPath('userData') || process.cwd(), 'logs');
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB per MCP config
+const MAX_FILES = 5;
 
-// Define log colors
-const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'white',
-};
-
-// Add colors to Winston
-winston.addColors(colors);
-
-// Define log format
-const format = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(
-    info =>
-      `${info.timestamp} ${info.level}: ${info.message}${info.metadata ? ` ${JSON.stringify(info.metadata)}` : ''}`
-  )
+// Custom format for log entries
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.errors({ stack: true }),
+  format.splat(),
+  format.json()
 );
 
-// Define log file paths
-const logDir = process.env.LOG_FILE ? path.dirname(process.env.LOG_FILE) : 'logs';
-const logFile = process.env.LOG_FILE || path.join(logDir, 'app.log');
-
-// Create logger
-export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  levels,
-  format,
+// Create logger instance
+export const logger = createLogger({
+  level: LOG_LEVEL,
+  format: logFormat,
+  defaultMeta: {
+    app: 'beatport-downloader',
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+  },
   transports: [
-    // Write all logs to console
-    new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+    // Console transport for development with pretty format
+    new transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(({ timestamp, level, message, ...meta }) => {
+          const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+          return `${timestamp} [${level}]: ${message} ${metaStr}`;
+        })
+      ),
     }),
-    // Write all logs with level 'info' and below to app.log
-    new winston.transports.File({
-      filename: logFile,
-      maxsize: parseInt(process.env.MAX_LOG_SIZE || '10485760'), // 10MB
-      maxFiles: parseInt(process.env.MAX_LOG_FILES || '5'),
-      tailable: true,
-      format: winston.format.combine(winston.format.uncolorize(), winston.format.json()),
-    }),
-    // Write all errors to error.log
-    new winston.transports.File({
-      filename: path.join(logDir, 'error.log'),
+    // File transport for errors
+    new transports.File({
+      filename: join(LOG_DIR, 'error.log'),
       level: 'error',
-      maxsize: parseInt(process.env.MAX_LOG_SIZE || '10485760'), // 10MB
-      maxFiles: parseInt(process.env.MAX_LOG_FILES || '5'),
+      maxsize: MAX_FILE_SIZE,
+      maxFiles: MAX_FILES,
       tailable: true,
-      format: winston.format.combine(winston.format.uncolorize(), winston.format.json()),
+      format: format.combine(format.timestamp(), format.json()),
+    }),
+    // File transport for combined logs
+    new transports.File({
+      filename: join(LOG_DIR, 'combined.log'),
+      maxsize: MAX_FILE_SIZE,
+      maxFiles: MAX_FILES,
+      tailable: true,
+      format: format.combine(format.timestamp(), format.json()),
     }),
   ],
-  // Handle uncaught exceptions
-  exceptionHandlers: [
-    new winston.transports.File({
-      filename: path.join(logDir, 'exceptions.log'),
-      maxsize: parseInt(process.env.MAX_LOG_SIZE || '10485760'), // 10MB
-      maxFiles: parseInt(process.env.MAX_LOG_FILES || '5'),
-      tailable: true,
-    }),
-  ],
-  // Handle unhandled promise rejections
-  rejectionHandlers: [
-    new winston.transports.File({
-      filename: path.join(logDir, 'rejections.log'),
-      maxsize: parseInt(process.env.MAX_LOG_SIZE || '10485760'), // 10MB
-      maxFiles: parseInt(process.env.MAX_LOG_FILES || '5'),
-      tailable: true,
-    }),
-  ],
-  // Exit on error
+  // Handle exceptions and rejections
+  handleExceptions: true,
+  handleRejections: true,
   exitOnError: false,
 });
 
-// Create a stream object with a write function that will be used by Morgan
-export const stream = {
-  write: (message: string) => {
-    logger.http(message.trim());
-  },
+// Add request context tracking
+export const addRequestContext = (requestId: string) => {
+  return logger.child({ requestId });
 };
+
+// Add performance monitoring with thresholds from MCP config
+export const logPerformance = (operation: string, startTime: number) => {
+  const duration = Date.now() - startTime;
+  const level = duration > 1000 ? 'warn' : 'info'; // 1000ms threshold from MCP config
+  logger.log(level, `Performance: ${operation}`, {
+    duration,
+    operation,
+    threshold: 1000,
+    exceeded: duration > 1000,
+  });
+};
+
+// Add structured error logging with metadata
+export const logError = (error: Error, context: Record<string, any> = {}) => {
+  logger.error('Error occurred', {
+    error: {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    },
+    context,
+    timestamp: Date.now(),
+    category: 'error',
+  });
+};
+
+// Add application metrics logging with MCP thresholds
+export const logMetric = (
+  metric: string,
+  value: number,
+  tags: Record<string, string> = {},
+  thresholds?: { warn: number; error: number }
+) => {
+  const defaultThresholds = {
+    memory: { warn: 85, error: 95 },
+    cpu: { warn: 80, error: 90 },
+    latency: { warn: 1000, error: 2000 },
+    errors: { warn: 5, error: 10 },
+    queue: { warn: 100, error: 200 },
+  } as const;
+
+  const metricThresholds = thresholds ||
+    defaultThresholds[metric as keyof typeof defaultThresholds] || {
+      warn: Infinity,
+      error: Infinity,
+    };
+
+  const level =
+    value > metricThresholds.error ? 'error' : value > metricThresholds.warn ? 'warn' : 'info';
+
+  logger.log(level, 'Metric recorded', {
+    metric,
+    value,
+    tags,
+    timestamp: Date.now(),
+    thresholds: metricThresholds,
+  });
+};
+
+// Export types for better type safety
+export type Logger = typeof logger;
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
